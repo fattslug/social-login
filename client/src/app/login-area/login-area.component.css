@@ -1,0 +1,18 @@
+.login-button {
+    cursor: pointer;
+    width: 191px;
+    height: 46px;
+    transition: all 0.5s ease-in-out;
+}
+
+.login-button--google {
+    background-image: url('../../assets/google/btn_google_signin_dark_normal_web.png');
+    opacity: 0.8;
+    background-repeat: no-repeat;
+}
+.login-button--google:hover {
+    opacity: 1;
+}
+.login-button--google:active {
+    background-image: url('../../assets/google/btn_google_signin_dark_pressed_web.png');
+}
