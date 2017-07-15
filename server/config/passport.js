@@ -1,79 +1,150 @@
-// load all the things we need
-var LocalStrategy = require('passport-local').Strategy;
-var FacebookStrategy = require('passport-facebook').Strategy;
-var TwitterStrategy  = require('passport-twitter').Strategy;
-var GoogleStrategy = require('passport-google-oauth').OAuth2Strategy;
-
-// load up the user model
-var User = require('../models/user');
+var FacebookStrategy = require('passport-facebook').Strategy; // Import Passport-Facebook Package
+var TwitterStrategy = require('passport-twitter').Strategy; // Import Passport Twitter Package
+var GoogleStrategy = require('passport-google-oauth').OAuth2Strategy; // Import Passport Google Package
+var User = require('../models/user'); // Import User Model
+var session = require('express-session'); // Import Express Session Package
+var jwt = require('jsonwebtoken'); // Import JWT Package
+var secret = 'harrypotter'; // Create custom secret to use with JWT
 
 // load the auth variables
 var configAuth = require('./auth');
 
-module.exports = function(passport) {
+module.exports = function(app, passport) {
 
-    // used to serialize the user for the session
+    // Start Passport Configuration Settings
+    app.use(passport.initialize());
+    app.use(passport.session());
+    app.use(session({
+        secret: 'keyboard cat', 
+        resave: false, 
+        saveUninitialized: true, 
+        cookie: { 
+            secure: false 
+        } 
+    }));
+    // End Passport Configuration Settings
+
+    // Serialize users once logged in   
     passport.serializeUser(function(user, done) {
-        done(null, user.id);
+        // Check if the user has an active account
+        if (user.active) {
+            // Check if user's social media account has an error
+            if (user.error) {
+                token = 'unconfirmed/error'; // Set url to different error page
+            } else {
+                token = jwt.sign({ username: user.username, email: user.email }, secret, { expiresIn: '24h' }); // If account active, give user token
+            }
+        } else {
+            token = 'inactive/error'; // If account not active, provide invalid token for use in redirecting later
+        }
+        done(null, user.id); // Return user object
     });
 
-    // used to deserialize the user
+    // Deserialize Users once logged out    
     passport.deserializeUser(function(id, done) {
         User.findById(id, function(err, user) {
-            done(err, user);
+            done(err, user); // Complete deserializeUser and return done
         });
     });
 
-    // code for login (use('local-login', new LocalStategy))
-    // code for signup (use('local-signup', new LocalStategy))
-    // code for facebook (use('facebook', new FacebookStrategy))
-    // code for twitter (use('twitter', new TwitterStrategy))
-
-    // =========================================================================
-    // GOOGLE ==================================================================
-    // =========================================================================
+    // Google Strategy  
     passport.use(new GoogleStrategy({
+            clientID        : configAuth.googleAuth.clientID,
+            clientSecret    : configAuth.googleAuth.clientSecret,
+            callbackURL     : configAuth.googleAuth.callbackURL,
+        },
+        function(req, accessToken, refreshToken, profile, done) { // called when we hit the callbackURL
+            console.log("Using Google Strategy");
+            console.log(profile);
+            done(null, profile);
+            // User.findOne({ email: profile.emails[0].value }).select('username active password email').exec(function(err, user) {
+            //     if (err) {
+            //         console.log("Error - see log");
+            //         console.log(err);
+            //         done(err);
+            //     }
 
-        clientID        : configAuth.googleAuth.clientID,
-        clientSecret    : configAuth.googleAuth.clientSecret,
-        callbackURL     : configAuth.googleAuth.callbackURL,
+            //     if (user && user !== null) {
+            //         console.log("Success - user found!");
+            //         console.log(user);
+            //         done(null, user);
+            //     } else {
+            //         console.log("Error - no user found!");
+            //         done(err);
+            //     }
+            // });
+        }
+    ));
 
-    },
-    function(token, refreshToken, profile, done) {
+    // Facebook Strategy    
+    // passport.use(new FacebookStrategy({
+    //         clientID: '310132302703073', // Replace with your Facebook Developer App client ID
+    //         clientSecret: '2e94e77add384b6e2b2029947c3861b4', // Replace with your Facebook Developer client secret
+    //         callbackURL: "http://www.herokutestapp3z24.com/auth/facebook/callback", // Replace with your Facebook Developer App callback URL
+    //         profileFields: ['id', 'displayName', 'photos', 'email']
+    //     },
+    //     function(accessToken, refreshToken, profile, done) {
+    //         User.findOne({ email: profile._json.email }).select('username active password email').exec(function(err, user) {
+    //             if (err) done(err);
 
-        // make the code asynchronous
-        // User.findOne won't fire until we have all our data back from Google
-        process.nextTick(function() {
+    //             if (user && user !== null) {
+    //                 done(null, user);
+    //             } else {
+    //                 done(err);
+    //             }
+    //         });
+    //     }
+    // ));
 
-            // try to find the user based on their google id
-            User.findOne({ 'google.id' : profile.id }, function(err, user) {
-                if (err)
-                    return done(err);
+    // Twitter Strategy
+    // passport.use(new TwitterStrategy({
+    //         consumerKey: 'nAsRdF40TX5fQ7QivmuJGWWSj', // Replace with your Twitter Developer App consumer key
+    //         consumerSecret: 'WH4MaKulaiPzrBttgS5KlQzanXmZIKZ4hmAlflfwX8jk3WNTwA', // Replace with your Twitter Developer App consumer secret
+    //         callbackURL: "http://www.herokutestapp3z24.com/auth/twitter/callback", // Replace with your Twitter Developer App callback URL
+    //         userProfileURL: "https://api.twitter.com/1.1/account/verify_credentials.json?include_email=true"
+    //     },
+    //     function(token, tokenSecret, profile, done) {
+    //         if (profile.emails) {
+    //             User.findOne({ email: profile.emails[0].value }).select('username active password email').exec(function(err, user) {
+    //                 if (err) {
+    //                     done(err);
+    //                 } else {
+    //                     if (user && user !== null) {
+    //                         done(null, user);
+    //                     } else {
+    //                         done(err);
+    //                     }
+    //                 }
+    //             });
+    //         } else {
+    //             user = {}; // Since no user object exists, create a temporary one in order to return an error
+    //             user.id = 'null'; // Temporary id
+    //             user.active = true; // Temporary status
+    //             user.error = true; // Ensure error is known to exist
+    //             done(null, user); // Serialize and catch error
+    //         }
+    //     }
+    // ));
 
-                if (user) {
+    // Google Routes    
+    app.get('/auth/google', passport.authenticate('google', { scope: ['https://www.googleapis.com/auth/plus.login', 'profile', 'email'] }));
+    app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: 'http://localhost:4200/login-error' }), function(req, res) {
+        console.log("---- CALLBACK SUCCESS ----");
+        console.log(req);
+        res.redirect('http://localhost:4200/' + token); // Redirect user with newly assigned token
+    });
 
-                    // if a user is found, log them in
-                    return done(null, user);
-                } else {
-                    // if the user isnt in our database, create a new user
-                    var newUser          = new User();
+    // Twitter Routes
+    // app.get('/auth/twitter', passport.authenticate('twitter'));
+    // app.get('/auth/twitter/callback', passport.authenticate('twitter', { failureRedirect: '/twittererror' }), function(req, res) {
+    //     res.redirect('/twitter/' + token); // Redirect user with newly assigned token
+    // });
 
-                    // set all of the relevant information
-                    newUser.google.id    = profile.id;
-                    newUser.google.token = token;
-                    newUser.google.name  = profile.displayName;
-                    newUser.google.email = profile.emails[0].value; // pull the first email
+    // // Facebook Routes
+    // app.get('/auth/facebook/callback', passport.authenticate('facebook', { failureRedirect: '/facebookerror' }), function(req, res) {
+    //     res.redirect('/facebook/' + token); // Redirect user with newly assigned token
+    // });
+    // app.get('/auth/facebook', passport.authenticate('facebook', { scope: 'email' }));
 
-                    // save the user
-                    newUser.save(function(err) {
-                        if (err)
-                            throw err;
-                        return done(null, newUser);
-                    });
-                }
-            });
-        });
-
-    }));
-
+    return passport; // Return Passport Object
 };
