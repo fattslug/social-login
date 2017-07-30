@@ -14,9 +14,6 @@ app.use(bodyParser.json()); // Body-parser middleware
 app.use(bodyParser.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
 app.use(express.static(__dirname + '/public')); // Allow front end to access public folder
 
-// 
-// <---------- REPLACE WITH YOUR MONGOOSE CONFIGURATION ---------->
-// 
 mongoose.connect('mongodb://localhost/social-login', function(err) {
     if (err) {
         console.log('Not connected to the database: ' + err); // Log to console if unable to connect to database

@@ -26,16 +26,12 @@ module.exports = function(app, passport) {
 
     // Serialize users once logged in   
     passport.serializeUser(function(user, done) {
-        // Check if the user has an active account
-        if (user.active) {
-            // Check if user's social media account has an error
-            if (user.error) {
-                token = 'unconfirmed/error'; // Set url to different error page
-            } else {
-                token = jwt.sign({ username: user.username, email: user.email }, secret, { expiresIn: '24h' }); // If account active, give user token
-            }
+        console.log("Serializing user...");
+        // Check if user's social media account has an error
+        if (user.error) {
+            token = 'unconfirmed/error'; // Set url to different error page
         } else {
-            token = 'inactive/error'; // If account not active, provide invalid token for use in redirecting later
+            token = jwt.sign({ username: user.username, email: user.email }, secret, { expiresIn: '24h' }); // If account active, give user token
         }
         done(null, user.id); // Return user object
     });
@@ -54,25 +50,40 @@ module.exports = function(app, passport) {
             callbackURL     : configAuth.googleAuth.callbackURL,
         },
         function(req, accessToken, refreshToken, profile, done) { // called when we hit the callbackURL
-            console.log("Using Google Strategy");
-            console.log(profile);
-            done(null, profile);
-            // User.findOne({ email: profile.emails[0].value }).select('username active password email').exec(function(err, user) {
-            //     if (err) {
-            //         console.log("Error - see log");
-            //         console.log(err);
-            //         done(err);
-            //     }
+            console.log("Strategy callback...");
 
-            //     if (user && user !== null) {
-            //         console.log("Success - user found!");
-            //         console.log(user);
-            //         done(null, user);
-            //     } else {
-            //         console.log("Error - no user found!");
-            //         done(err);
-            //     }
-            // });
+            User.findOne({ 'google.email': profile.emails[0].value }).select('username active password email').exec(function(err, user) {
+                if (err) {
+                    console.log("Error - see log");
+                    // console.log(err);
+                    done(err);
+                }
+
+                if (user && user !== null) {
+                    console.log("Success - user found!");
+                    done(null, user);
+                } else {
+                    console.log("Error - no user found!");
+                    var newUser = new User({
+                        google: {
+                            id: profile.id,
+                            token: profile.accessToken,
+                            email: profile.emails[0].value,
+                            name: profile.displayName
+                        }
+                    });
+                    newUser.save(function(mongoErr) {
+                        if (mongoErr) {
+                            console.log("Error saving new user");
+                            // console.log(mongoErr);
+                            done(mongoErr);
+                        } else {
+                            console.log("New user added:");
+                            done(null, newUser);
+                        }
+                    });
+                }
+            });
         }
     ));
 
@@ -129,8 +140,7 @@ module.exports = function(app, passport) {
     // Google Routes    
     app.get('/auth/google', passport.authenticate('google', { scope: ['https://www.googleapis.com/auth/plus.login', 'profile', 'email'] }));
     app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: 'http://localhost:4200/login-error' }), function(req, res) {
-        console.log("---- CALLBACK SUCCESS ----");
-        console.log(req);
+        console.log("Redirecting back to app...");
         res.redirect('http://localhost:4200/' + token); // Redirect user with newly assigned token
     });
 
