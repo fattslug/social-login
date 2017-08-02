@@ -67,7 +67,7 @@ module.exports = function(app, passport) {
                     var newUser = new User({
                         google: {
                             id: profile.id,
-                            token: profile.accessToken,
+                            token: token,
                             email: profile.emails[0].value,
                             name: profile.displayName
                         }
@@ -140,8 +140,14 @@ module.exports = function(app, passport) {
     // Google Routes    
     app.get('/auth/google', passport.authenticate('google', { scope: ['https://www.googleapis.com/auth/plus.login', 'profile', 'email'] }));
     app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: 'http://localhost:4200/login-error' }), function(req, res) {
-        console.log("Redirecting back to app...");
+        console.log("Redirecting back to app...");        
         res.redirect('http://localhost:4200/' + token); // Redirect user with newly assigned token
+    });
+
+    app.get('/auth/test', function(req, res) {
+        console.log(req.session.token);
+        console.log(req.session.id);
+        res.status(200);
     });
 
     // Twitter Routes
