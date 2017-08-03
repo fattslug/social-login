@@ -10,6 +10,7 @@ module.exports = function (app) {
         .post(DB.createUser);
 
     app.route('/users/:id')
+        .get(DB.getUser)
         .delete(DB.deleteUser);
     // app.route('/rules/:id')
     //     .post(RULE.updateRule)

@@ -10,7 +10,7 @@ var secret = 'harrypotter'; // Create custom secret to use with JWT
 var configAuth = require('../utility/config');
 
 // Google Routes
-    var token;
+var token;
 
 
 module.exports = function (app, passport) {
@@ -30,45 +30,14 @@ module.exports = function (app, passport) {
 
     // Serialize users once logged in   
     passport.serializeUser(function (user, done) {
-        console.log("Serializing user...");
+        console.log("Serializing user...:" + JSON.stringify(user));
         // Check if user's social media account has an error
+        var tkn;
         if (user.error) {
-            user.google.token = 'unconfirmed/error'; // Set url to different error page
+            token = 'unconfirmed/error'; // Set url to different error page
         } else {
-            user.google.token = jwt.sign({username: user.username, email: user.email}, secret, {expiresIn: '24h'}); // If account active, give user token
+            token = user.id; // If account active, give user token
         }
-        USER.findOne({'google.email': profile.emails[0].value}).select('username active password email').exec(function (err, dbUser) {
-            if (err) {
-                console.log("Error - see log");
-                // console.log(err);
-                done(err);
-            }
-
-            if (dbUser && dbUser !== null) {
-                console.log("Success - user found!");
-                done(null, dbUser);
-            } else {
-                console.log("Error - no user found!");
-                var newUser = new USER({
-                    google: {
-                        id: user.id,
-                        token: user.token,
-                        email: user.emails[0].value,
-                        name: user.displayName
-                    }
-                });
-                newUser.save(function (mongoErr) {
-                    if (mongoErr) {
-                        console.log("Error saving new user");
-                        // console.log(mongoErr);
-                        done(mongoErr);
-                    } else {
-                        console.log("New user added:");
-                        done(null, newUser);
-                    }
-                });
-            }
-        });
         done(null, user); // Return user object
     });
 
@@ -89,29 +58,82 @@ module.exports = function (app, passport) {
             console.log(req);
             console.log(done);
             console.log("Strategy callback...");
-            done(null, profile); // Return user object
+
+            USER.findOne({'google.email': profile.emails[0].value}).select('username active password email').exec(function (err, user) {
+                if (err) {
+                    console.log("Error - see log");
+                    // console.log(err);
+                    done(err);
+                }
+
+                if (user && user !== null) {
+                    console.log("Success - user found!");
+                    done(null, user);
+                } else {
+                    console.log("Error - no user found!");
+                    console.log(profile);
+                    var newUser = new USER({
+                        google: {
+                            id: profile.id,
+                            token: profile.token,
+                            email: profile.emails[0].value,
+                            name: profile.displayName
+                        }
+                    });
+                    newUser.save(function (mongoErr) {
+                        if (mongoErr) {
+                            console.log("Error saving new user");
+                            // console.log(mongoErr);
+                            done(mongoErr);
+                        } else {
+                            console.log("New user added:");
+                            done(null, newUser);
+                        }
+                    });
+                }
+            });
         }
     ));
 
-    // Facebook Strategy    
-    // passport.use(new FacebookStrategy({
-    //         clientID: '310132302703073', // Replace with your Facebook Developer App client ID
-    //         clientSecret: '2e94e77add384b6e2b2029947c3861b4', // Replace with your Facebook Developer client secret
-    //         callbackURL: "http://www.herokutestapp3z24.com/auth/facebook/callback", // Replace with your Facebook Developer App callback URL
-    //         profileFields: ['id', 'displayName', 'photos', 'email']
-    //     },
-    //     function(accessToken, refreshToken, profile, done) {
-    //         User.findOne({ email: profile._json.email }).select('username active password email').exec(function(err, user) {
-    //             if (err) done(err);
+    // Facebook Strategy
+    passport.use(new FacebookStrategy({
+            clientID: configAuth.facebookAuth.clientID, // Replace with your Facebook Developer App client ID
+            clientSecret: configAuth.facebookAuth.clientSecret, // Replace with your Facebook Developer client secret
+            callbackURL: configAuth.facebookAuth.callbackURL, // Replace with your Facebook Developer App callback URL
+            profileFields: ['id', 'displayName', 'photos', 'email']
+        },
+        function(accessToken, refreshToken, profile, done) {
+            USER.findOne({ email: profile._json.email }).select('username active password email').exec(function(err, user) {
+                if (err) done(err);
 
-    //             if (user && user !== null) {
-    //                 done(null, user);
-    //             } else {
-    //                 done(err);
-    //             }
-    //         });
-    //     }
-    // ));
+                if (user && user !== null) {
+                    console.log("Success - user found!");
+                    done(null, user);
+                } else {
+                    console.log("Error - no user found!");
+                    console.log(profile);
+                    var newUser = new USER({
+                        facebook: {
+                            id: profile.id,
+                            token: profile.token,
+                            email: profile.emails[0].value,
+                            name: profile.displayName
+                        }
+                    });
+                    newUser.save(function (mongoErr) {
+                        if (mongoErr) {
+                            console.log("Error saving new user");
+                            // console.log(mongoErr);
+                            done(mongoErr);
+                        } else {
+                            console.log("New user added:");
+                            done(null, newUser);
+                        }
+                    });
+                }
+            });
+        }
+    ));
 
     // Twitter Strategy
     // passport.use(new TwitterStrategy({
@@ -156,11 +178,11 @@ module.exports = function (app, passport) {
     //     res.redirect('/twitter/' + token); // Redirect user with newly assigned token
     // });
 
-    // // Facebook Routes
-    // app.get('/auth/facebook/callback', passport.authenticate('facebook', { failureRedirect: '/facebookerror' }), function(req, res) {
-    //     res.redirect('/facebook/' + token); // Redirect user with newly assigned token
-    // });
-    // app.get('/auth/facebook', passport.authenticate('facebook', { scope: 'email' }));
+    // Facebook Routes
+    app.get('/auth/facebook/callback', passport.authenticate('facebook', { failureRedirect: '/facebookerror' }), function(req, res) {
+        res.redirect('http://localhost:4200/' + token); // Redirect user with newly assigned token
+    });
+    app.get('/auth/facebook', passport.authenticate('facebook', { scope: 'email' }));
 
     return passport; // Return Passport Object
 };
