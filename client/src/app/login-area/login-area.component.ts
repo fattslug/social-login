@@ -1,4 +1,4 @@
-import { LoginService} from './login.service';
+import { UserService } from './user.service';
 import { Component, OnInit } from '@angular/core';
 
 @Component({
@@ -8,7 +8,7 @@ import { Component, OnInit } from '@angular/core';
 })
 export class LoginAreaComponent implements OnInit {
 
-	constructor(private loginService: LoginService) {
+	constructor(private userService: UserService) {
 		
 	}
 
@@ -18,7 +18,7 @@ export class LoginAreaComponent implements OnInit {
 	googleLogin(): Promise<any> {
 		console.log("LoginAreaComponent googleLogin() running...");
 		return new Promise(resolve => {
-			this.loginService.doGoogleLogin().then((res) => {
+			this.userService.doGoogleLogin().then((res) => {
 				console.log(res);
 				resolve(res);
 			})
@@ -28,7 +28,7 @@ export class LoginAreaComponent implements OnInit {
 	getAllUsers(): Promise<any> {
 		console.log("LoginAreaComponent getAllUsers() running...");
 		return new Promise(resolve => {
-			this.loginService.getAllUsers().then((res) => {
+			this.userService.getAllUsers().then((res) => {
 				console.log(res);
 				resolve(res);
 			})

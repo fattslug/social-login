@@ -1,5 +1,6 @@
+import { RouteService } from './route.service';
 
-import { LoginService } from './login-area/login.service';
+import { UserService } from './login-area/user.service';
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 
@@ -16,7 +17,7 @@ import { HttpModule } from "@angular/http";
     BrowserModule,
     HttpModule
   ],
-  providers: [LoginService],
+  providers: [UserService, RouteService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
