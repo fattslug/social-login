@@ -1,58 +1,65 @@
 var FacebookStrategy = require('passport-facebook').Strategy; // Import Passport-Facebook Package
 var TwitterStrategy = require('passport-twitter').Strategy; // Import Passport Twitter Package
 var GoogleStrategy = require('passport-google-oauth').OAuth2Strategy; // Import Passport Google Package
-var User = require('../models/user'); // Import User Model
+var USER = require('../models/user'); // Import User Model
 var session = require('express-session'); // Import Express Session Package
 var jwt = require('jsonwebtoken'); // Import JWT Package
 var secret = 'harrypotter'; // Create custom secret to use with JWT
 
 // load the auth variables
-var configAuth = require('./auth');
+var configAuth = require('../utility/config');
 
-module.exports = function(app, passport) {
+// Google Routes
+var token;
 
-    // Start Passport Configuration Settings
+
+module.exports = function (app, passport) {
+// Start Passport Configuration Settings
     app.use(passport.initialize());
     app.use(passport.session());
     app.use(session({
-        secret: 'keyboard cat', 
-        resave: false, 
-        saveUninitialized: true, 
-        cookie: { 
-            secure: false 
-        } 
+        secret: 'keyboard cat',
+        resave: false,
+        saveUninitialized: true,
+        cookie: {
+            secure: false
+        }
     }));
-    // End Passport Configuration Settings
+// End Passport Configuration Settings
+
 
     // Serialize users once logged in   
-    passport.serializeUser(function(user, done) {
-        console.log("Serializing user...");
+    passport.serializeUser(function (user, done) {
+        console.log("Serializing user...:" + JSON.stringify(user));
         // Check if user's social media account has an error
+        var tkn;
         if (user.error) {
             token = 'unconfirmed/error'; // Set url to different error page
         } else {
-            token = jwt.sign({ username: user.username, email: user.email }, secret, { expiresIn: '24h' }); // If account active, give user token
+            token = user.id; // If account active, give user token
         }
-        done(null, user.id); // Return user object
+        done(null, user); // Return user object
     });
 
     // Deserialize Users once logged out    
-    passport.deserializeUser(function(id, done) {
-        User.findById(id, function(err, user) {
+    passport.deserializeUser(function (id, done) {
+        USER.findById(id, function (err, user) {
             done(err, user); // Complete deserializeUser and return done
         });
     });
 
     // Google Strategy  
     passport.use(new GoogleStrategy({
-            clientID        : configAuth.googleAuth.clientID,
-            clientSecret    : configAuth.googleAuth.clientSecret,
-            callbackURL     : configAuth.googleAuth.callbackURL,
+            clientID: configAuth.googleAuth.clientID,
+            clientSecret: configAuth.googleAuth.clientSecret,
+            callbackURL: configAuth.googleAuth.callbackURL,
         },
-        function(req, accessToken, refreshToken, profile, done) { // called when we hit the callbackURL
+        function (req, accessToken, refreshToken, profile, done) { // called when we hit the callbackURL\
+            console.log(req);
+            console.log(done);
             console.log("Strategy callback...");
 
-            User.findOne({ 'google.email': profile.emails[0].value }).select('username active password email').exec(function(err, user) {
+            USER.findOne({'google.email': profile.emails[0].value}).select('username active password email').exec(function (err, user) {
                 if (err) {
                     console.log("Error - see log");
                     // console.log(err);
@@ -64,15 +71,16 @@ module.exports = function(app, passport) {
                     done(null, user);
                 } else {
                     console.log("Error - no user found!");
-                    var newUser = new User({
+                    console.log(profile);
+                    var newUser = new USER({
                         google: {
                             id: profile.id,
-                            token: token,
+                            token: profile.token,
                             email: profile.emails[0].value,
                             name: profile.displayName
                         }
                     });
-                    newUser.save(function(mongoErr) {
+                    newUser.save(function (mongoErr) {
                         if (mongoErr) {
                             console.log("Error saving new user");
                             // console.log(mongoErr);
@@ -87,25 +95,45 @@ module.exports = function(app, passport) {
         }
     ));
 
-    // Facebook Strategy    
-    // passport.use(new FacebookStrategy({
-    //         clientID: '310132302703073', // Replace with your Facebook Developer App client ID
-    //         clientSecret: '2e94e77add384b6e2b2029947c3861b4', // Replace with your Facebook Developer client secret
-    //         callbackURL: "http://www.herokutestapp3z24.com/auth/facebook/callback", // Replace with your Facebook Developer App callback URL
-    //         profileFields: ['id', 'displayName', 'photos', 'email']
-    //     },
-    //     function(accessToken, refreshToken, profile, done) {
-    //         User.findOne({ email: profile._json.email }).select('username active password email').exec(function(err, user) {
-    //             if (err) done(err);
+    // Facebook Strategy
+    passport.use(new FacebookStrategy({
+            clientID: configAuth.facebookAuth.clientID, // Replace with your Facebook Developer App client ID
+            clientSecret: configAuth.facebookAuth.clientSecret, // Replace with your Facebook Developer client secret
+            callbackURL: configAuth.facebookAuth.callbackURL, // Replace with your Facebook Developer App callback URL
+            profileFields: ['id', 'displayName', 'photos', 'email']
+        },
+        function(accessToken, refreshToken, profile, done) {
+            USER.findOne({ email: profile._json.email }).select('username active password email').exec(function(err, user) {
+                if (err) done(err);
 
-    //             if (user && user !== null) {
-    //                 done(null, user);
-    //             } else {
-    //                 done(err);
-    //             }
-    //         });
-    //     }
-    // ));
+                if (user && user !== null) {
+                    console.log("Success - user found!");
+                    done(null, user);
+                } else {
+                    console.log("Error - no user found!");
+                    console.log(profile);
+                    var newUser = new USER({
+                        facebook: {
+                            id: profile.id,
+                            token: profile.token,
+                            email: profile.emails[0].value,
+                            name: profile.displayName
+                        }
+                    });
+                    newUser.save(function (mongoErr) {
+                        if (mongoErr) {
+                            console.log("Error saving new user");
+                            // console.log(mongoErr);
+                            done(mongoErr);
+                        } else {
+                            console.log("New user added:");
+                            done(null, newUser);
+                        }
+                    });
+                }
+            });
+        }
+    ));
 
     // Twitter Strategy
     // passport.use(new TwitterStrategy({
@@ -137,37 +165,11 @@ module.exports = function(app, passport) {
     //     }
     // ));
 
-    // Google Routes    
-    app.get('/auth/google', passport.authenticate('google', { scope: ['https://www.googleapis.com/auth/plus.login', 'profile', 'email'] }));
-    app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: 'http://localhost:4200/login-error' }), function(req, res) {
-        console.log("Redirecting back to app...");        
+    // Google Routes
+    app.get('/auth/google', passport.authenticate('google', {scope: ['https://www.googleapis.com/auth/plus.login', 'profile', 'email']}));
+    app.get('/auth/google/callback', passport.authenticate('google', {failureRedirect: 'http://localhost:4200/login-error'}), function (req, res) {
+        console.log("Redirecting back to app...");
         res.redirect('http://localhost:4200/' + token); // Redirect user with newly assigned token
-    });
-
-    app.get('/auth/test', function(req, res) {
-        console.log(req.session.token);
-        console.log(req.session.id);
-        res.status(200);
-    });
-
-    // app.get('/user/token', function(req, res) {
-
-    // });
-
-    app.get('/users', (req, res) => {
-        console.log("Get all users...");
-
-        res.send("Test");
-        // res.status(200);
-
-        // User.find({}, (err, users) => {
-        //     var userMap = {};
-        //     users.forEach((user) => {
-        //         userMap[user._id] = user;
-        //     });
-
-        //     res.send(userMap);
-        // });
     });
 
     // Twitter Routes
@@ -176,11 +178,11 @@ module.exports = function(app, passport) {
     //     res.redirect('/twitter/' + token); // Redirect user with newly assigned token
     // });
 
-    // // Facebook Routes
-    // app.get('/auth/facebook/callback', passport.authenticate('facebook', { failureRedirect: '/facebookerror' }), function(req, res) {
-    //     res.redirect('/facebook/' + token); // Redirect user with newly assigned token
-    // });
-    // app.get('/auth/facebook', passport.authenticate('facebook', { scope: 'email' }));
+    // Facebook Routes
+    app.get('/auth/facebook/callback', passport.authenticate('facebook', { failureRedirect: '/facebookerror' }), function(req, res) {
+        res.redirect('http://localhost:4200/' + token); // Redirect user with newly assigned token
+    });
+    app.get('/auth/facebook', passport.authenticate('facebook', { scope: 'email' }));
 
     return passport; // Return Passport Object
 };
