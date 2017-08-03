@@ -34,6 +34,15 @@ export class UserService {
 		})
 	}
 
+	doFacebookLogin(): Promise<any> {
+		return new Promise((resolve, reject) => {
+			this.http.get('http://192.168.141.242:3000/auth/facebook').subscribe(res => {
+				console.log(res);
+				resolve(true);
+			});
+		})
+	}
+
 	getUserByToken(token: string): Promise<User> {
 		return new Promise((resolve, reject) => {
 			this.http.get('http://localhost:8080/user/' + token).subscribe(res => {

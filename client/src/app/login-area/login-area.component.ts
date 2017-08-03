@@ -25,6 +25,26 @@ export class LoginAreaComponent implements OnInit {
 		});
 	}
 
+	facebookLogin(): Promise<any> {
+		console.log("LoginAreaComponent facebookLogin() running...");
+		return new Promise(resolve => {
+			this.userService.doFacebookLogin().then((res) => {
+				console.log(res);
+				resolve(res);
+			})
+		});
+	}
+
+	// getCurrentUser(): Promise<any> {
+
+	// 	return new Promise(resolve => {
+	// 		this.userService.getUserByToken().then((res) => {
+	// 			console.log(res);
+	// 			resolve(res);
+	// 		})
+	// 	});
+	// }
+
 	getAllUsers(): Promise<any> {
 		console.log("LoginAreaComponent getAllUsers() running...");
 		return new Promise(resolve => {
