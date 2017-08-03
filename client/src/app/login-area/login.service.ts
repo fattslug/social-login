@@ -17,4 +17,21 @@ export class LoginService {
 		})
 	}
 
+	getUserByToken(token: string): Promise<any> {
+		return new Promise((resolve, reject) => {
+			this.http.get('http://localhost:8080/user/token/' + token).subscribe(res => {
+				console.log(res);
+				resolve(res);
+			});
+		});
+	}
+
+	getAllUsers(): Promise<any> {
+		return new Promise((resolve, reject) => {
+			this.http.get('http://localhost:8080/users').subscribe(res => {
+				console.log(res);
+				resolve(res);
+			});
+		});
+	}
 }

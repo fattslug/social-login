@@ -25,4 +25,14 @@ export class LoginAreaComponent implements OnInit {
 		});
 	}
 
+	getAllUsers(): Promise<any> {
+		console.log("LoginAreaComponent getAllUsers() running...");
+		return new Promise(resolve => {
+			this.loginService.getAllUsers().then((res) => {
+				console.log(res);
+				resolve(res);
+			})
+		});
+	}
+
 } 

@@ -7,6 +7,23 @@ var bodyParser = require('body-parser'); // Node.js body parsing middleware. Par
 var router = express.Router(); // Invoke the Express Router
 var path = require('path'); // Import path module
 var passport = require('passport'); // Express-compatible authentication middleware for Node.js.
+
+// Add headers
+app.use(function (req, res, next) {
+
+    // Website you wish to allow to connect
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // Request methods you wish to allow
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+
+    // Request headers you wish to allow
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, authorization');
+
+    // Pass to next layer of middleware
+    return next();
+});
+
 var social = require('./config/passport')(app, passport); // Import passport.js End Points/API
 
 app.use(morgan('dev')); // Morgan Middleware
@@ -21,11 +38,6 @@ mongoose.connect('mongodb://localhost/social-login', function(err) {
         console.log('Successfully connected to MongoDB'); // Log to console if able to connect to database
     }
 });
-
-// Set Application Static Layout
-// app.get('*', function(req, res) {
-//     res.sendFile(path.join(__dirname + '/public/app/views/index.html')); // Set index.html as layout
-// });
 
 // Start Server
 app.listen(port, function() {

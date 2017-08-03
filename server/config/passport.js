@@ -150,6 +150,26 @@ module.exports = function(app, passport) {
         res.status(200);
     });
 
+    // app.get('/user/token', function(req, res) {
+
+    // });
+
+    app.get('/users', (req, res) => {
+        console.log("Get all users...");
+
+        res.send("Test");
+        // res.status(200);
+
+        // User.find({}, (err, users) => {
+        //     var userMap = {};
+        //     users.forEach((user) => {
+        //         userMap[user._id] = user;
+        //     });
+
+        //     res.send(userMap);
+        // });
+    });
+
     // Twitter Routes
     // app.get('/auth/twitter', passport.authenticate('twitter'));
     // app.get('/auth/twitter/callback', passport.authenticate('twitter', { failureRedirect: '/twittererror' }), function(req, res) {
