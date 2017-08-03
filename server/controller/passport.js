@@ -1,89 +1,95 @@
 var FacebookStrategy = require('passport-facebook').Strategy; // Import Passport-Facebook Package
 var TwitterStrategy = require('passport-twitter').Strategy; // Import Passport Twitter Package
 var GoogleStrategy = require('passport-google-oauth').OAuth2Strategy; // Import Passport Google Package
-var User = require('../models/user'); // Import User Model
+var USER = require('../models/user'); // Import User Model
 var session = require('express-session'); // Import Express Session Package
 var jwt = require('jsonwebtoken'); // Import JWT Package
 var secret = 'harrypotter'; // Create custom secret to use with JWT
 
 // load the auth variables
-var configAuth = require('./auth');
+var configAuth = require('../utility/config');
 
-module.exports = function(app, passport) {
+// Google Routes
+    var token;
 
-    // Start Passport Configuration Settings
+
+module.exports = function (app, passport) {
+// Start Passport Configuration Settings
     app.use(passport.initialize());
     app.use(passport.session());
     app.use(session({
-        secret: 'keyboard cat', 
-        resave: false, 
-        saveUninitialized: true, 
-        cookie: { 
-            secure: false 
-        } 
+        secret: 'keyboard cat',
+        resave: false,
+        saveUninitialized: true,
+        cookie: {
+            secure: false
+        }
     }));
-    // End Passport Configuration Settings
+// End Passport Configuration Settings
+
 
     // Serialize users once logged in   
-    passport.serializeUser(function(user, done) {
+    passport.serializeUser(function (user, done) {
         console.log("Serializing user...");
         // Check if user's social media account has an error
         if (user.error) {
-            token = 'unconfirmed/error'; // Set url to different error page
+            user.google.token = 'unconfirmed/error'; // Set url to different error page
         } else {
-            token = jwt.sign({ username: user.username, email: user.email }, secret, { expiresIn: '24h' }); // If account active, give user token
+            user.google.token = jwt.sign({username: user.username, email: user.email}, secret, {expiresIn: '24h'}); // If account active, give user token
         }
-        done(null, user.id); // Return user object
+        USER.findOne({'google.email': profile.emails[0].value}).select('username active password email').exec(function (err, dbUser) {
+            if (err) {
+                console.log("Error - see log");
+                // console.log(err);
+                done(err);
+            }
+
+            if (dbUser && dbUser !== null) {
+                console.log("Success - user found!");
+                done(null, dbUser);
+            } else {
+                console.log("Error - no user found!");
+                var newUser = new USER({
+                    google: {
+                        id: user.id,
+                        token: user.token,
+                        email: user.emails[0].value,
+                        name: user.displayName
+                    }
+                });
+                newUser.save(function (mongoErr) {
+                    if (mongoErr) {
+                        console.log("Error saving new user");
+                        // console.log(mongoErr);
+                        done(mongoErr);
+                    } else {
+                        console.log("New user added:");
+                        done(null, newUser);
+                    }
+                });
+            }
+        });
+        done(null, user); // Return user object
     });
 
     // Deserialize Users once logged out    
-    passport.deserializeUser(function(id, done) {
-        User.findById(id, function(err, user) {
+    passport.deserializeUser(function (id, done) {
+        USER.findById(id, function (err, user) {
             done(err, user); // Complete deserializeUser and return done
         });
     });
 
     // Google Strategy  
     passport.use(new GoogleStrategy({
-            clientID        : configAuth.googleAuth.clientID,
-            clientSecret    : configAuth.googleAuth.clientSecret,
-            callbackURL     : configAuth.googleAuth.callbackURL,
+            clientID: configAuth.googleAuth.clientID,
+            clientSecret: configAuth.googleAuth.clientSecret,
+            callbackURL: configAuth.googleAuth.callbackURL,
         },
-        function(req, accessToken, refreshToken, profile, done) { // called when we hit the callbackURL
+        function (req, accessToken, refreshToken, profile, done) { // called when we hit the callbackURL\
+            console.log(req);
+            console.log(done);
             console.log("Strategy callback...");
-
-            User.findOne({ 'google.email': profile.emails[0].value }).select('username active password email').exec(function(err, user) {
-                if (err) {
-                    console.log("Error - see log");
-                    // console.log(err);
-                    done(err);
-                }
-
-                if (user && user !== null) {
-                    console.log("Success - user found!");
-                    done(null, user);
-                } else {
-                    console.log("Error - no user found!");
-                    var newUser = new User({
-                        google: {
-                            id: profile.id,
-                            token: token,
-                            email: profile.emails[0].value,
-                            name: profile.displayName
-                        }
-                    });
-                    newUser.save(function(mongoErr) {
-                        if (mongoErr) {
-                            console.log("Error saving new user");
-                            // console.log(mongoErr);
-                            done(mongoErr);
-                        } else {
-                            console.log("New user added:");
-                            done(null, newUser);
-                        }
-                    });
-                }
-            });
+            done(null, profile); // Return user object
         }
     ));
 
@@ -137,37 +143,11 @@ module.exports = function(app, passport) {
     //     }
     // ));
 
-    // Google Routes    
-    app.get('/auth/google', passport.authenticate('google', { scope: ['https://www.googleapis.com/auth/plus.login', 'profile', 'email'] }));
-    app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: 'http://localhost:4200/login-error' }), function(req, res) {
-        console.log("Redirecting back to app...");        
+    // Google Routes
+    app.get('/auth/google', passport.authenticate('google', {scope: ['https://www.googleapis.com/auth/plus.login', 'profile', 'email']}));
+    app.get('/auth/google/callback', passport.authenticate('google', {failureRedirect: 'http://localhost:4200/login-error'}), function (req, res) {
+        console.log("Redirecting back to app...");
         res.redirect('http://localhost:4200/' + token); // Redirect user with newly assigned token
-    });
-
-    app.get('/auth/test', function(req, res) {
-        console.log(req.session.token);
-        console.log(req.session.id);
-        res.status(200);
-    });
-
-    // app.get('/user/token', function(req, res) {
-
-    // });
-
-    app.get('/users', (req, res) => {
-        console.log("Get all users...");
-
-        res.send("Test");
-        // res.status(200);
-
-        // User.find({}, (err, users) => {
-        //     var userMap = {};
-        //     users.forEach((user) => {
-        //         userMap[user._id] = user;
-        //     });
-
-        //     res.send(userMap);
-        // });
     });
 
     // Twitter Routes
