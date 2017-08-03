@@ -69,10 +69,12 @@ module.exports = function (app, passport) {
                 } else {
                     console.log("Error - no user found!");
                     console.log(profile);
+                    var photo = profile.photos[0].value.slice(0,profile.photos[0].value.length-2);
                     var newUser = new USER({
                         google: {
+                            photo: photo,
                             id: profile.id,
-                            token: profile.token,
+                            token: req,
                             email: profile.emails[0].value,
                             name: profile.displayName
                         }
@@ -99,7 +101,7 @@ module.exports = function (app, passport) {
             profileFields: ['id', 'displayName', 'photos', 'email']
         },
         function(accessToken, refreshToken, profile, done) {
-            USER.findOne({ email: profile._json.email }).select('username active password email').exec(function(err, user) {
+            USER.findOne({'facebook.email': profile.emails[0].value}).select('username active password email').exec(function(err, user) {
                 if (err) done(err);
 
                 if (user && user !== null) {
@@ -109,6 +111,7 @@ module.exports = function (app, passport) {
                     console.log("Error - no user found!");
                     var newUser = new USER({
                         facebook: {
+                            photo: profile.photos[0].value,
                             id: profile.id,
                             token: profile.token,
                             email: profile.emails[0].value,
@@ -160,7 +163,7 @@ module.exports = function (app, passport) {
     // ));
 
     // Google Routes
-    app.get('/auth/google', passport.authenticate('google', {scope: ['https://www.googleapis.com/auth/plus.login', 'profile', 'email']}));
+    app.get('/auth/google', passport.authenticate('google', {scope: ['https://www.googleapis.com/auth/plus.login', 'profile', 'email', 'https://www.googleapis.com/auth/calendar']}));
     app.get('/auth/google/callback', passport.authenticate('google', {failureRedirect: 'http://localhost:4200/login-error'}), function (req, res) {
         console.log("Redirecting back to app...");
         res.redirect('http://localhost:4200/login/' + token); // Redirect user with newly assigned token
