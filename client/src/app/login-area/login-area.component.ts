@@ -15,25 +15,25 @@ export class LoginAreaComponent implements OnInit {
 	ngOnInit() {
 	}
 
-	googleLogin(): Promise<any> {
-		console.log("LoginAreaComponent googleLogin() running...");
-		return new Promise(resolve => {
-			this.userService.doGoogleLogin().then((res) => {
-				console.log(res);
-				resolve(res);
-			})
-		});
-	}
+	// googleLogin(): Promise<any> {
+	// 	console.log("LoginAreaComponent googleLogin() running...");
+	// 	return new Promise(resolve => {
+	// 		this.userService.doGoogleLogin().then((res) => {
+	// 			console.log(res);
+	// 			resolve(res);
+	// 		})
+	// 	});
+	// }
 
-	facebookLogin(): Promise<any> {
-		console.log("LoginAreaComponent facebookLogin() running...");
-		return new Promise(resolve => {
-			this.userService.doFacebookLogin().then((res) => {
-				console.log(res);
-				resolve(res);
-			})
-		});
-	}
+	// facebookLogin(): Promise<any> {
+	// 	console.log("LoginAreaComponent facebookLogin() running...");
+	// 	return new Promise(resolve => {
+	// 		this.userService.doFacebookLogin().then((res) => {
+	// 			console.log(res);
+	// 			resolve(res);
+	// 		})
+	// 	});
+	// }
 
 	// getCurrentUser(): Promise<any> {
 

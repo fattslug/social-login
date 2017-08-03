@@ -30,9 +30,8 @@ module.exports = function (app, passport) {
 
     // Serialize users once logged in   
     passport.serializeUser(function (user, done) {
-        console.log("Serializing user...:" + JSON.stringify(user));
+        console.log("Serializing user...:");
         // Check if user's social media account has an error
-        var tkn;
         if (user.error) {
             token = 'unconfirmed/error'; // Set url to different error page
         } else {
@@ -55,8 +54,6 @@ module.exports = function (app, passport) {
             callbackURL: configAuth.googleAuth.callbackURL,
         },
         function (req, accessToken, refreshToken, profile, done) { // called when we hit the callbackURL\
-            console.log(req);
-            console.log(done);
             console.log("Strategy callback...");
 
             USER.findOne({'google.email': profile.emails[0].value}).select('username active password email').exec(function (err, user) {
@@ -83,7 +80,6 @@ module.exports = function (app, passport) {
                     newUser.save(function (mongoErr) {
                         if (mongoErr) {
                             console.log("Error saving new user");
-                            // console.log(mongoErr);
                             done(mongoErr);
                         } else {
                             console.log("New user added:");
@@ -111,7 +107,6 @@ module.exports = function (app, passport) {
                     done(null, user);
                 } else {
                     console.log("Error - no user found!");
-                    console.log(profile);
                     var newUser = new USER({
                         facebook: {
                             id: profile.id,
@@ -123,7 +118,6 @@ module.exports = function (app, passport) {
                     newUser.save(function (mongoErr) {
                         if (mongoErr) {
                             console.log("Error saving new user");
-                            // console.log(mongoErr);
                             done(mongoErr);
                         } else {
                             console.log("New user added:");
@@ -169,7 +163,7 @@ module.exports = function (app, passport) {
     app.get('/auth/google', passport.authenticate('google', {scope: ['https://www.googleapis.com/auth/plus.login', 'profile', 'email']}));
     app.get('/auth/google/callback', passport.authenticate('google', {failureRedirect: 'http://localhost:4200/login-error'}), function (req, res) {
         console.log("Redirecting back to app...");
-        res.redirect('http://localhost:4200/' + token); // Redirect user with newly assigned token
+        res.redirect('http://localhost:4200/login/' + token); // Redirect user with newly assigned token
     });
 
     // Twitter Routes
@@ -180,7 +174,7 @@ module.exports = function (app, passport) {
 
     // Facebook Routes
     app.get('/auth/facebook/callback', passport.authenticate('facebook', { failureRedirect: '/facebookerror' }), function(req, res) {
-        res.redirect('http://localhost:4200/' + token); // Redirect user with newly assigned token
+        res.redirect('http://localhost:4200/login/' + token); // Redirect user with newly assigned token
     });
     app.get('/auth/facebook', passport.authenticate('facebook', { scope: 'email' }));
 

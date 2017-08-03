@@ -11,14 +11,13 @@ import { LoginAreaComponent } from './login-area/login-area.component';
 import { HttpModule } from "@angular/http";
 
 const appRoutes: Routes = [
-	{ 
-		path: '',
-		redirectTo: '/',
-		pathMatch: 'full'
+	{
+		path: 'login/:userid',
+		component: AppLoginComponent
 	},
 	{
-		path: '/:userid',
-		component: AppLoginComponent
+		path: '',
+		component: LoginAreaComponent
 	}
 ];
 

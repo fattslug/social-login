@@ -1,3 +1,4 @@
-<p>
-  app-login works!
-</p>
+<div *ngIf="userService.currentUser._id">
+	 Your name: {{ userService.currentUser.google.name }} <br /> 
+	Your email: {{ userService.currentUser.google.email }}
+</div>
