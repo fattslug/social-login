@@ -1,4 +1,5 @@
 import { UserService } from './../login-area/user.service';
+import { User } from '../login-area/user';
 import { Router, ActivatedRoute, Params } from '@angular/router';
 import { Component, OnInit } from '@angular/core';
 
@@ -22,7 +23,10 @@ export class AppLoginComponent implements OnInit {
 			console.log(this.userId);
 		});
 
-		this.userService.getUserByToken(this.userId);
+		this.userService.getUserByToken(this.userId).then((user: User) => {
+			// if (user.google)
+			console.log(user);
+		});
 	}
 
 }

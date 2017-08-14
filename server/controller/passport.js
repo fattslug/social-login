@@ -30,7 +30,7 @@ module.exports = function (app, passport) {
 
     // Serialize users once logged in   
     passport.serializeUser(function (user, done) {
-        console.log("Serializing user...:");
+        console.log("Serializing user...");
         // Check if user's social media account has an error
         if (user.error) {
             token = 'unconfirmed/error'; // Set url to different error page
@@ -54,25 +54,19 @@ module.exports = function (app, passport) {
             callbackURL: configAuth.googleAuth.callbackURL,
         },
         function (req, accessToken, refreshToken, profile, done) { // called when we hit the callbackURL\
-            console.log("Strategy callback...");
+            console.log("Google Strategy callback...");
 
             USER.findOne({'google.email': profile.emails[0].value}).select('username active password email').exec(function (err, user) {
                 if (err) {
                     console.log("Error - see log");
-                    // console.log(err);
                     done(err);
                 }
 
                 if (user && user !== null) {
-                    console.log("Success - user found!");
+                    console.log("User found - retrieving profile...");
                     done(null, user);
                 } else {
-                    console.log("Error - no user found!");
-
-                    console.log(profile);
-                    console.log(profile._json.placesLived);
-                    // console.log(profile.organizations);
-
+                    console.log("No existing user found - creating new user...");
                     var photo = profile.photos[0].value.slice(0,profile.photos[0].value.length-2);
                     var newUser = new USER({
                         google: {
@@ -89,10 +83,10 @@ module.exports = function (app, passport) {
                     });
                     newUser.save(function (mongoErr) {
                         if (mongoErr) {
-                            console.log("Error saving new user");
+                            console.log("Error saving new user.");
                             done(mongoErr);
                         } else {
-                            console.log("New user added:");
+                            console.log("New user added!");
                             done(null, newUser);
                         }
                     });
@@ -109,18 +103,20 @@ module.exports = function (app, passport) {
             profileFields: ['id', 'displayName', 'photos', 'email']
         },
         function(accessToken, refreshToken, profile, done) {
+            console.log("Facebook Strategy callback...");
             USER.findOne({'facebook.email': profile.emails[0].value}).select('username active password email').exec(function(err, user) {
                 if (err) done(err);
 
                 if (user && user !== null) {
-                    console.log("Success - user found!");
+                    console.log("User found - retrieving profile...");
+                    console.log(profile);
                     done(null, user);
                 } else {
-                    console.log("Error - no user found!");
+                    console.log("No existing user found - creating new user...");
                     var newUser = new USER({
                         facebook: {
                             photo: profile.photos[0].value,
-                            id: profile.id,
+                            id: req,
                             token: profile.token,
                             email: profile.emails[0].value,
                             name: profile.displayName
@@ -128,10 +124,10 @@ module.exports = function (app, passport) {
                     });
                     newUser.save(function (mongoErr) {
                         if (mongoErr) {
-                            console.log("Error saving new user");
+                            console.log("Error saving new user.");
                             done(mongoErr);
                         } else {
-                            console.log("New user added:");
+                            console.log("New user added!");
                             done(null, newUser);
                         }
                     });
@@ -184,10 +180,11 @@ module.exports = function (app, passport) {
     // });
 
     // Facebook Routes
-    app.get('/auth/facebook/callback', passport.authenticate('facebook', { failureRedirect: '/facebookerror' }), function(req, res) {
+    app.get('/auth/facebook', passport.authenticate('facebook', { scope: 'email' }));
+    app.get('/auth/facebook/callback', passport.authenticate('facebook', { failureRedirect: 'http://localhost:4200/login-error' }), function(req, res) {
+        console.log("Redirecting back to app...");
         res.redirect('http://localhost:4200/login/' + token); // Redirect user with newly assigned token
     });
-    app.get('/auth/facebook', passport.authenticate('facebook', { scope: 'email' }));
 
     return passport; // Return Passport Object
 };

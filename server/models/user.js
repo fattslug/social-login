@@ -30,8 +30,8 @@ var userSchema = mongoose.Schema({
         name: String,
         currentOccupation: String,
 
-        placesLived: [{}],
-        organizations: [{}]
+        placesLived: { type: Array, default: void 0 },
+        organizations: { type: Array, default: void 0 }
     }
 
 });
