@@ -46,6 +46,7 @@ export class UserService {
 	getUserByToken(token: string): Promise<User> {
 		return new Promise((resolve, reject) => {
 			this.http.get('http://localhost:3000/user/' + token).subscribe(res => {
+				console.log(res);
 				this.setActiveUser(deserialize<User>(User, res.json()));
 				resolve(this.currentUser);
 			});

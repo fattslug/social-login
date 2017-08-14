@@ -1,6 +1,8 @@
 import { UserService } from './user.service';
 import { Component, OnInit } from '@angular/core';
-import { Http } from '@angular/http';
+import { Http, Response } from '@angular/http';
+
+import { deserialize, serialize } from "serializer.ts/Serializer";
 
 @Component({
 	selector: 'app-login-area',
@@ -60,7 +62,8 @@ export class LoginAreaComponent implements OnInit {
 	getEvents(): Promise<any> {
 		console.log("LoginAreaComponent getEvents() running...");
 		return new Promise((resolve, reject) => {
-			this.http.get('https://www.googleapis.com/calendar/v3/calendars/primary/events?access_token=ya29.GlucBIidBxCSTSR36Iwq0WZAfKkDzoZOlPs6xbVwLdipnlaxe-1M5e1RFIZGomJs9OVgfyT8WHo7UWdXWD0IY3bMr-icw8orTsX0kTGwDvQASRog9P7wwji_p8cI').subscribe(res => {
+			this.http.get('https://www.googleapis.com/calendar/v3/calendars/primary/events?access_token=ya29.GmGcBB2DCJppMMROu5YfuHE82YUjcqnnsCbRcYFUZpXlCeprxMhmWiBzxTRzCELMVxJahFowqk8hF_C-iJ0GNJea5uUpNhMiRZ0yS2RUpQv0OdELDeWpojD0Cj4DR9NzjCE1').subscribe(res => {
+				// let responseObj = deserialize<Response>(Response, res.json())
 				console.log(res);
 				resolve(true);
 			});

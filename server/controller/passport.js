@@ -68,7 +68,11 @@ module.exports = function (app, passport) {
                     done(null, user);
                 } else {
                     console.log("Error - no user found!");
+
                     console.log(profile);
+                    console.log(profile._json.placesLived);
+                    // console.log(profile.organizations);
+
                     var photo = profile.photos[0].value.slice(0,profile.photos[0].value.length-2);
                     var newUser = new USER({
                         google: {
@@ -76,7 +80,11 @@ module.exports = function (app, passport) {
                             id: profile.id,
                             token: req,
                             email: profile.emails[0].value,
-                            name: profile.displayName
+                            name: profile.displayName,
+                            currentOccupation: profile._json.occupation,
+
+                            placesLived: profile._json.placesLived,
+                            organizations: profile._json.organizations
                         }
                     });
                     newUser.save(function (mongoErr) {
