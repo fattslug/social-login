@@ -4,11 +4,11 @@
 			<div class="l-max l-max--8-col-large">
 				<div class="agent-profile" itemscope itemtype="http://schema.org/InsuranceAgency">
 					<div class="agent-profile__section-1">
-						<h2 class="heading heading--1 heading--first" itemprop="name">{{ userService.currentUser.google.name }}</h2>
-						<p class="agent-profile__job-title">Master developer</p>
+						<h2 class="heading heading--1 heading--first" itemprop="name">{{ userService.currentUser.name }}</h2>
+						<p class="agent-profile__job-title">{{ userService.currentUser.currentOccupation }}</p>
 					</div>
 					<div class="agent-profile__section-2">
-						<img class="agent-profile__image" src="{{ userService.currentUser.google.photo }}500" itemprop="photo" alt="">
+						<img class="agent-profile__image" src="{{ userService.currentUser.photo }}" itemprop="photo" alt="">
 					</div>
 					<div class="agent-profile__section-3">
 						<h3 class="heading heading--2 heading--first">Contact Information</h3>
@@ -22,10 +22,10 @@
 							</div>
 							<div class="l-columns__column">
 								<p class="text-icon text-icon--tel" itemprop="telephone"></p>
-								<p class="text-icon text-icon--email"><a href="mailto:{{ userService.currentUser.google.email }}" itemprop="email">{{ userService.currentUser.google.email }}</a></p>
+								<p class="text-icon text-icon--email"><a href="mailto:{{ userService.currentUser.email }}" itemprop="email">{{ userService.currentUser.email }}</a></p>
 								<ul class="social-list plain-list">
-									<li><a class="social-list__icon social-list__icon--facebook" href="#example" *ngIf="userService.currentUser.facebook" itemprop="sameAs">Facebook for {{ userService.currentUser.facebook.name }}</a></li>
-									<li><a class="social-list__icon social-list__icon--google" href="#example" *ngIf="userService.currentUser.google" itemprop="sameAs">Google for {{ userService.currentUser.google.name }}</a></li>
+									<li><a class="social-list__icon social-list__icon--facebook" href="#example" *ngIf="userService.currentUser.facebook" itemprop="sameAs">Facebook for {{ userService.currentUser.name }}</a></li>
+									<li><a class="social-list__icon social-list__icon--google" href="#example" *ngIf="userService.currentUser.google" itemprop="sameAs">Google for {{ userService.currentUser.name }}</a></li>
 								</ul>
 							</div>
 						</div>

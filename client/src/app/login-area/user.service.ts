@@ -22,7 +22,8 @@ export class UserService {
 	}
 
 	doLogout(): void {
-		this.currentUser = new User();
+		this.currentUser = null;
+		localStorage.setItem('currentUser', null);
 	}
 
 	// doGoogleLogin(): Promise<any> {
@@ -43,9 +44,9 @@ export class UserService {
 	// 	})
 	// }
 
-	getUserByToken(token: string): Promise<User> {
+	getUserById(id: string): Promise<User> {
 		return new Promise((resolve, reject) => {
-			this.http.get('http://localhost:3000/user/' + token).subscribe(res => {
+			this.http.get('http://localhost:3000/user/' + id).subscribe(res => {
 				console.log(res);
 				this.setActiveUser(deserialize<User>(User, res.json()));
 				resolve(this.currentUser);
@@ -55,7 +56,12 @@ export class UserService {
 
 	setActiveUser(user: User) {
 		this.currentUser = user;
+		localStorage.setItem('currentUser', JSON.stringify({ token: user.token, userID: user.userID }));
 		console.log("Active user set: ", this.currentUser);
+	}
+
+	getActiveUser(): User {
+		return this.currentUser;
 	}
 
 	getAllUsers(): Promise<any> {

@@ -1,10 +1,11 @@
 export class User {
     id: string;
+    userID: string;
     name: string;
     photo: string;
     email: string;
     token: string;
-    sm_platform: string;
+    sm_platforms: string;
     currentOccupation: string;
 
     placesLived: object[];

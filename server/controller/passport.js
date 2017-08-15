@@ -36,6 +36,7 @@ module.exports = function (app, passport) {
             token = 'unconfirmed/error'; // Set url to different error page
         } else {
             token = user.id; // If account active, give user token
+            console.log(user);
         }
         done(null, user); // Return user object
     });
@@ -53,10 +54,10 @@ module.exports = function (app, passport) {
             clientSecret: configAuth.googleAuth.clientSecret,
             callbackURL: configAuth.googleAuth.callbackURL,
         },
-        function (req, accessToken, refreshToken, profile, done) { // called when we hit the callbackURL\
+        function (accessToken, refreshToken, profile, done) { // called when we hit the callbackURL
             console.log("Google Strategy callback...");
 
-            USER.findOne({'google.email': profile.emails[0].value}).select('username active password email').exec(function (err, user) {
+            USER.findOne({'email': profile.emails[0].value}).select('username active password email').exec(function (err, user) {
                 if (err) {
                     console.log("Error - see log");
                     done(err);
@@ -69,17 +70,16 @@ module.exports = function (app, passport) {
                     console.log("No existing user found - creating new user...");
                     var photo = profile.photos[0].value.slice(0,profile.photos[0].value.length-2);
                     var newUser = new USER({
-                        google: {
-                            photo: photo,
-                            id: profile.id,
-                            token: req,
-                            email: profile.emails[0].value,
-                            name: profile.displayName,
-                            currentOccupation: profile._json.occupation,
+                        userID: profile.id,
+                        photo: photo + "500",
+                        email: profile.emails[0].value,
+                        name: profile.displayName,
+                        currentOccupation: profile._json.occupation,
+                        sm_platform: "Google",
+                        token: accessToken,
 
-                            placesLived: profile._json.placesLived,
-                            organizations: profile._json.organizations
-                        }
+                        placesLived: profile._json.placesLived,
+                        organizations: profile._json.organizations
                     });
                     newUser.save(function (mongoErr) {
                         if (mongoErr) {
@@ -104,23 +104,22 @@ module.exports = function (app, passport) {
         },
         function(accessToken, refreshToken, profile, done) {
             console.log("Facebook Strategy callback...");
-            USER.findOne({'facebook.email': profile.emails[0].value}).select('username active password email').exec(function(err, user) {
+
+            USER.findOne({'email': profile.emails[0].value}).select('username active password email').exec(function(err, user) {
                 if (err) done(err);
 
                 if (user && user !== null) {
                     console.log("User found - retrieving profile...");
-                    console.log(profile);
                     done(null, user);
                 } else {
                     console.log("No existing user found - creating new user...");
                     var newUser = new USER({
-                        facebook: {
-                            photo: profile.photos[0].value,
-                            id: req,
-                            token: profile.token,
-                            email: profile.emails[0].value,
-                            name: profile.displayName
-                        }
+                        userID: profile.id,
+                        photo: "https://graph.facebook.com/" + profile.id + "/picture?type=large&w‌​idth=720&height=720",
+                        email: profile.emails[0].value,
+                        sm_platform: "Facebook",
+                        name: profile.displayName,
+                        token: accessToken
                     });
                     newUser.save(function (mongoErr) {
                         if (mongoErr) {

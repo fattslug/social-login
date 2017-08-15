@@ -1,3 +1,4 @@
+import { Router } from '@angular/router';
 import { UserService } from './user.service';
 import { Component, OnInit } from '@angular/core';
 import { Http, Response } from '@angular/http';
@@ -11,10 +12,18 @@ import { deserialize, serialize } from "serializer.ts/Serializer";
 })
 export class LoginAreaComponent implements OnInit {
 
-	constructor(private userService: UserService, private http: Http) {
+	constructor(public userService: UserService, private http: Http, private router: Router) {
 	}
 
 	ngOnInit() {
+		// this.currentUser = JSON.parse(localStorage.getItem('currentUser'));
+		console.log(this.userService.currentUser);
+		if (this.userService.currentUser.token) {
+			console.log("User is logged in");
+			var token = this.userService.currentUser.token; // your token
+		} else {
+			console.log("User is not logged in");
+		}
 	}
 
 	// googleLogin(): Promise<any> {
@@ -57,6 +66,12 @@ export class LoginAreaComponent implements OnInit {
 				resolve(res);
 			})
 		});
+	}
+
+	logout(): void {
+		this.userService.doLogout();
+		this.router.navigate(['/']);
+		console.log()
 	}
 
 	getEvents(): Promise<any> {

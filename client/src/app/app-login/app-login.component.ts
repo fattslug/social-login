@@ -23,7 +23,7 @@ export class AppLoginComponent implements OnInit {
 			console.log(this.userId);
 		});
 
-		this.userService.getUserByToken(this.userId).then((user: User) => {
+		this.userService.getUserById(this.userId).then((user: User) => {
 			// if (user.google)
 			console.log(user);
 		});
