@@ -9,7 +9,7 @@ module.exports = function (app) {
         .get(DB.getAllUser)
         .post(DB.createUser);
 
-    app.route('/users/:id')
+    app.route('/user/:id')
         .get(DB.getUser)
         .delete(DB.deleteUser);
     // app.route('/rules/:id')
