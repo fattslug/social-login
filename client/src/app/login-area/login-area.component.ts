@@ -12,7 +12,7 @@ import { deserialize, serialize } from "serializer.ts/Serializer";
 })
 export class LoginAreaComponent implements OnInit {
 
-	constructor(public userService: UserService, private http: Http, private router: Router) {
+	constructor(private userService: UserService, private http: Http, private router: Router) {
 	}
 
 	ngOnInit() {

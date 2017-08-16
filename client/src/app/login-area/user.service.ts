@@ -11,6 +11,7 @@ export class UserService {
 
 	constructor(
 		private http: Http) {
+			console.log("Constructor: ", this.currentUser);
 	}
 
 	isLoggedIn(): boolean {
@@ -19,12 +20,13 @@ export class UserService {
 			console.log("-- USER IS LOGGED IN --");
 			return true;
 		} else {
+			console.log("-- USER IS NOT LOGGED IN --");
 			return false;
 		}
 	}
 
 	doLogout(): void {
-		this.currentUser = null;
+		// this.currentUser = null;
 		localStorage.removeItem('currentUser');
 	}
 
@@ -49,8 +51,10 @@ export class UserService {
 	getUserById(id: string): Promise<User> {
 		return new Promise((resolve, reject) => {
 			this.http.get('http://localhost:3000/user/' + id).subscribe(res => {
-				console.log("Getting user by ID: ", res.json());
-				resolve(res.json());
+				let user = deserialize<User>(User, res.json());
+				console.log("User found: ", user);
+				this.currentUser = user;
+				resolve(user);
 			});
 		});
 	}
@@ -58,19 +62,17 @@ export class UserService {
 	setCurrentUser(user: User) {
 		this.currentUser = user;
 		localStorage.setItem('currentUser', JSON.stringify({ token: user.token, userID: user.userID }));
-		console.log("Current user set: ", this.currentUser);
-		console.log("Current USER: ", this.getCurrentUser());
 	}
 
 	getCurrentUser(): User {
 		return this.currentUser;
 	}
 
-	getAllUsers(): Promise<any> {
+	getAllUsers(): Promise<User[]> {
 		return new Promise((resolve, reject) => {
 			this.http.get('http://localhost:3000/users').subscribe(res => {
-				console.log(res);
-				resolve(res);
+				console.log(res.json());
+				resolve(res.json());
 			});
 		});
 	}

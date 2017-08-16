@@ -1,5 +1,6 @@
 import { LoginAreaComponent } from './login-area/login-area.component';
 import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-root',
