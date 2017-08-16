@@ -7,14 +7,16 @@ import { deserialize, serialize } from "serializer.ts/Serializer";
 @Injectable()
 export class UserService {
 
+	currentUser: User;
+
 	constructor(
 		private http: Http) {
 	}
 
-	public currentUser = new User();
-
 	isLoggedIn(): boolean {
-		if (this.currentUser.id) {
+		let userCookie = JSON.parse(localStorage.getItem('currentUser'));
+		if (userCookie && this.currentUser) {
+			console.log("-- USER IS LOGGED IN --");
 			return true;
 		} else {
 			return false;
@@ -23,7 +25,7 @@ export class UserService {
 
 	doLogout(): void {
 		this.currentUser = null;
-		localStorage.setItem('currentUser', null);
+		localStorage.removeItem('currentUser');
 	}
 
 	// doGoogleLogin(): Promise<any> {
@@ -47,20 +49,20 @@ export class UserService {
 	getUserById(id: string): Promise<User> {
 		return new Promise((resolve, reject) => {
 			this.http.get('http://localhost:3000/user/' + id).subscribe(res => {
-				console.log(res);
-				this.setActiveUser(deserialize<User>(User, res.json()));
-				resolve(this.currentUser);
+				console.log("Getting user by ID: ", res.json());
+				resolve(res.json());
 			});
 		});
 	}
 
-	setActiveUser(user: User) {
+	setCurrentUser(user: User) {
 		this.currentUser = user;
 		localStorage.setItem('currentUser', JSON.stringify({ token: user.token, userID: user.userID }));
-		console.log("Active user set: ", this.currentUser);
+		console.log("Current user set: ", this.currentUser);
+		console.log("Current USER: ", this.getCurrentUser());
 	}
 
-	getActiveUser(): User {
+	getCurrentUser(): User {
 		return this.currentUser;
 	}
 

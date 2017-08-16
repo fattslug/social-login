@@ -20,13 +20,17 @@ export class AppLoginComponent implements OnInit {
 	ngOnInit() {
 		this.activatedRoute.params.subscribe((params: Params) => {
 			this.userId = params['userid'];
-			console.log(this.userId);
 		});
-
-		this.userService.getUserById(this.userId).then((user: User) => {
-			// if (user.google)
-			console.log(user);
-		});
+		if (this.userId) {
+			this.userService.getUserById(this.userId).then((user: User) => {
+				console.log("Current User: ", this.userService.getCurrentUser());
+				this.userService.setCurrentUser(user);
+				// We can call more User APIs here based on the sm_platform
+				// We just need the accessToken from local storage
+			});
+		} else {
+			console.log(this.userService.getCurrentUser());
+		}
 	}
 
 }

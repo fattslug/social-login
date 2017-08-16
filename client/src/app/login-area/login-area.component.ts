@@ -16,11 +16,10 @@ export class LoginAreaComponent implements OnInit {
 	}
 
 	ngOnInit() {
-		// this.currentUser = JSON.parse(localStorage.getItem('currentUser'));
-		console.log(this.userService.currentUser);
-		if (this.userService.currentUser.token) {
+		console.log("Current User: ", this.userService.getCurrentUser());
+		if (this.userService.isLoggedIn()) {
 			console.log("User is logged in");
-			var token = this.userService.currentUser.token; // your token
+			var token = this.userService.getCurrentUser().token; // your token
 		} else {
 			console.log("User is not logged in");
 		}
@@ -57,16 +56,6 @@ export class LoginAreaComponent implements OnInit {
 	// }
 
 	public events = [];
-
-	getAllUsers(): Promise<any> {
-		console.log("LoginAreaComponent getAllUsers() running...");
-		return new Promise(resolve => {
-			this.userService.getAllUsers().then((res) => {
-				console.log(res);
-				resolve(res);
-			})
-		});
-	}
 
 	logout(): void {
 		this.userService.doLogout();

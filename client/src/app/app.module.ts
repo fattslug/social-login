@@ -23,6 +23,10 @@ const appRoutes: Routes = [
 	{
 		path: 'login/:userid',
 		component: AppLoginComponent
+	},
+	{
+		path: 'profile',
+		component: AppLoginComponent
 	}
 ];
 
