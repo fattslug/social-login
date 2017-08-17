@@ -11,8 +11,157 @@ var FB = require('fb');
 var configAuth = require('../utility/config');
 var https = require('https');
 
-// Google Routes
 var token;
+
+// addPlatformToUser
+// Creates an object with data specific to a social platform
+// This data is then appended to our user object and updated back to the database
+function addPlatformToUser(profile, tokenData, smPlatform) {
+	var tokenTimestamp = new Date();
+	var tokenExpiry = tokenData.expires_in;
+	
+	if (smPlatform === "facebook") {
+		var platformData = {
+			facebook: {
+				in_use: true,
+				token: tokenData.access_token,
+				tokenTimestamp: tokenTimestamp,
+				tokenExpiry: new Date().setSeconds(tokenTimestamp.getSeconds() + tokenExpiry)
+			}
+		}
+	} else if (smPlatform === "google") {
+		var platformData = {
+			google: {
+				in_use: true,
+				currentOccupation: profile._json.occupation,
+				placesLived: profile._json.placesLived,
+				organizations: profile._json.organizations,
+				token: tokenData.access_token,
+				tokenTimestamp: tokenTimestamp,
+				tokenExpiry: new Date().setSeconds(tokenTimestamp.getSeconds() + tokenExpiry)
+			}
+		}
+	}
+	return platformData;
+}
+
+// createUser
+// Creates an object containing all generic user data, and data specific to the logged in social media platform
+// This object is then cast to a USER object, where we have access to our mongoose methods (CRUD)
+function createUser(profile, tokenData, smPlatform) {
+	var tokenTimestamp = new Date();
+	var tokenExpiry = tokenData.expires_in;
+	var photoUrl = smPlatform == "facebook" ? "https://graph.facebook.com/" + profile.id + "/picture?type=large&w‌​idth=720&height=720" : profile.photos[0].value.slice(0,profile.photos[0].value.length-2)+"500";
+
+	if (smPlatform === "facebook") {
+		// FACEBOOK USER
+		var newUser = {
+			userID: profile.id,
+			photo: photoUrl,
+			email: profile.emails[0].value,
+			name: profile.displayName,
+
+			facebook: {
+				in_use: true,
+				token: tokenData.access_token,
+				tokenTimestamp: tokenTimestamp,
+				tokenExpiry: new Date().setSeconds(tokenTimestamp.getSeconds() + tokenExpiry)
+			}
+		};
+	} else if (smPlatform === "google") {
+		// GOOGLE USER
+		var newUser = {
+			userID: profile.id,
+			photo: photoUrl,
+			email: profile.emails[0].value,
+			name: profile.displayName,
+			
+			google: {
+				in_use: true,
+				currentOccupation: profile._json.occupation,
+				placesLived: profile._json.placesLived,
+				organizations: profile._json.organizations,
+				token: tokenData.access_token,
+				tokenTimestamp: tokenTimestamp,
+				tokenExpiry: new Date().setSeconds(tokenTimestamp.getSeconds() + tokenExpiry)
+			}
+		};
+	}
+
+	return newUser;
+}
+
+
+// Find user
+// Finds the user if they already exist, refreshes accessToken if it is expired
+// If no user, registers the user in MongoDB and provides them with a fresh accessToken
+function findUser(profile, tokenData, smPlatform) {
+	return new Promise((resolve, reject) => {
+		USER.findOne({'email': profile.emails[0].value}).select('email facebook google').exec(function(err, user) {
+			if (err) done(err);
+
+			// USER FOUND -- FETCH USER
+			if (user && user !== null) {
+				console.log("User found - retrieving profile...");
+
+				// Has this user logged in with this social platform before?
+				if (!user[smPlatform].in_use) { // First time logging in with this platform
+					console.log("User's first time logging in with: " + smPlatform);
+					var updateUser = addPlatformToUser(profile, tokenData, smPlatform);
+
+					console.log("Updating userID: ", user._id);
+					USER.update({ _id: user._id }, updateUser, function(mongoErr, raw) {
+						if (mongoErr) {
+							console.log("Error updating user.");
+							resolve({err: mongoErr, data: null});
+						} else {
+							console.log("Existing user updated!");
+							resolve({err: null, data: user });
+						}
+					});
+				} else { // Platform has already been linked to this account
+					// CHECK ACCESS TOKENS FOR EXPIRATION
+					console.log("User has already linked this social platform: " + smPlatform);
+					var token = user[smPlatform].accessToken;
+					var tokenTimestamp = user[smPlatform].tokenTimestamp;
+					var tokenExpiry = user[smPlatform].tokenExpiry;
+
+					console.log("Token Expiry Date: ", tokenExpiry);
+
+					var currentDate = new Date().getSeconds();
+
+					if (tokenExpiry <= currentDate) {
+						console.log("Access token is expired - refreshing...");
+						if (smProfile === "google") {
+														
+						} else if (smProfile === "facebook") {
+
+						}
+					} else if (tokenExpiry > currentDate) {
+						console.log("Access token is still valid, keeping the same one...");
+					}
+
+					resolve({err: null, data: user});
+				}
+			// NO USER FOUND -- CREATE USER
+			} else {
+				console.log("No existing user found - creating new user...");
+				var newUser = new USER(createUser(profile, tokenData, smPlatform));
+
+				newUser.save(function (mongoErr) {
+					if (mongoErr) {
+						console.log("Error saving new user.");
+						resolve({err: mongoErr, data: null});
+					} else {
+						console.log("New user added!");
+						resolve({err: null, data: newUser});
+					}
+				});
+			}
+		});
+	});
+}
+
 
 module.exports = function (app, passport) {
 
@@ -49,102 +198,6 @@ module.exports = function (app, passport) {
         });
 	});
 
-	function createUser(profile, tokenData, smPlatform) {
-		var loginTimestamp = new Date();
-        var loginExpiry = tokenData.expires_in;
-        var photoUrl = smPlatform == "facebook" ? "https://graph.facebook.com/" + profile.id + "/picture?type=large&w‌​idth=720&height=720" : profile.photos[0].value.slice(0,profile.photos[0].value.length-2)+"500";
-
-		if (smPlatform === "facebook") {
-			// FACEBOOK USER
-			var newUser = new USER({
-				userID: profile.id,
-				photo: photoUrl,
-				email: profile.emails[0].value,
-				name: profile.displayName,
-				token: tokenData.access_token,
-				loginTimestamp: loginTimestamp,
-				loginExpiry: new Date().setSeconds(loginTimestamp.getSeconds() + loginExpiry),
-
-				facebook: {
-					in_use: true
-				}
-			});
-		} else if (smPlatform === "google") {
-			// GOOGLE USER
-			var newUser = new USER({
-				userID: profile.id,
-				photo: photoUrl,
-				email: profile.emails[0].value,
-				name: profile.displayName,
-				token: tokenData.access_token,
-				loginTimestamp: loginTimestamp,
-				loginExpiry: new Date().setSeconds(loginTimestamp.getSeconds() + loginExpiry),
-				
-				google: {
-					in_use: true,
-					currentOccupation: profile._json.occupation,
-					placesLived: profile._json.placesLived,
-					organizations: profile._json.organizations
-				}
-			});
-		}
-
-		return newUser;
-	}
-
-
-    // Find user
-    // Finds the user if they already exist, refreshes accessToken if it is expired
-    // If no user, registers the user in MongoDB and provides them with a fresh accessToken
-    function findUser(profile, tokenData, smPlatform) {
-        return new Promise((resolve, reject) => {
-            USER.findOne({'email': profile.emails[0].value}).select('email facebook google').exec(function(err, user) {
-                if (err) done(err);
-
-                if (user && user !== null) {
-					console.log("User found - retrieving profile...");
-
-					// Has this user logged in with this social platform before?
-					if (!user[smPlatform].in_use) {
-						console.log("User's first time logging in with: " + smPlatform);
-						var updateUser = new Object();
-						updateUser.google = {
-							in_use: true
-						};
-
-						console.log("Updating userID: ", user._id);
-						USER.update({ _id: user._id }, updateUser, function(mongoErr, raw) {
-							if (mongoErr) {
-								console.log("Error updating user.");
-								resolve({err: mongoErr, data: null});
-							} else {
-								console.log("Existing user updated!");
-								console.log(updateUser);
-								resolve({err: null, data: user });
-							}
-						});
-					} else {
-						console.log("User has already linked this social platform: " + smPlatform);
-						resolve({err: null, data: user});
-					}
-                } else {
-                    console.log("No existing user found - creating new user...");
-					var newUser = createUser(profile, tokenData, smPlatform);
-
-                    newUser.save(function (mongoErr) {
-                        if (mongoErr) {
-                            console.log("Error saving new user.");
-                            resolve({err: mongoErr, data: null});
-                        } else {
-                            console.log("New user added!");
-                            resolve({err: null, data: newUser});
-                        }
-                    });
-                }
-            });
-        });
-    }
-
     // Google Strategy  
     passport.use(new GoogleStrategy({
             clientID: configAuth.googleAuth.clientID,
@@ -155,6 +208,7 @@ module.exports = function (app, passport) {
             console.log("Google Strategy callback...");
 
             console.log("Access Token: ", accessToken);
+            console.log("Refresh Token: ", refreshToken);
             var options = {
                 host: 'www.googleapis.com',
                 port: 443,
@@ -194,6 +248,9 @@ module.exports = function (app, passport) {
         function(accessToken, refreshToken, profile, done) {
             console.log("Facebook Strategy callback...");
 
+			console.log("Access Token: ", accessToken);
+            console.log("Refresh Token: ", refreshToken);
+
             var shortLifeAccessToken = accessToken;
             var longLifeAccessToken;
 
@@ -225,14 +282,14 @@ module.exports = function (app, passport) {
     ));
 
     // Google Routes
-    app.get('/auth/google', passport.authenticate('google', {scope: ['https://www.googleapis.com/auth/plus.login', 'profile', 'email', 'https://www.googleapis.com/auth/calendar']}));
+    app.get('/auth/google', passport.authenticate('google', {scope: ['https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/calendar'], accessType: 'offline', approvalPrompt: 'force'}));
     app.get('/auth/google/callback', passport.authenticate('google', {failureRedirect: 'http://localhost:4200/login-error'}), function (req, res) {
         console.log("Redirecting back to app...");
         res.redirect('http://localhost:4200/login/' + token); // Redirect user with newly assigned token
     });
 
     // Facebook Routes
-    app.get('/auth/facebook', passport.authenticate('facebook', { scope: 'email, user_likes' }));
+    app.get('/auth/facebook', passport.authenticate('facebook', { scope: 'email, user_likes', accessType: 'offline', approvalPrompt: 'force'}));
     app.get('/auth/facebook/callback', passport.authenticate('facebook', { failureRedirect: 'http://localhost:4200/login-error' }), function(req, res) {
         console.log("Redirecting back to app...");
         res.redirect('http://localhost:4200/login/' + token); // Redirect user with newly assigned token

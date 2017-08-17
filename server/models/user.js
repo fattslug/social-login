@@ -9,18 +9,21 @@ var userSchema = mongoose.Schema({
     photo: String,
     email: String,
     name: String,
-    token: String,
-    loginTimestamp: Date,
-    loginExpiry: Date,
 
     google: {
         in_use: Boolean,
         currentOccupation: String,
         placesLived: { type: Array, default: void 0 },
-        organizations: { type: Array, default: void 0 }
+        organizations: { type: Array, default: void 0 },
+        token: String,
+        tokenTimestamp: Date,
+        tokenExpiry: Date
     },
     facebook: {
-        in_use: Boolean
+        in_use: Boolean,
+        token: String,
+        tokenTimestamp: Date,
+        tokenExpiry: Date
     }
 });
 
