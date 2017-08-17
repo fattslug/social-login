@@ -47,9 +47,9 @@ module.exports = function (app, passport) {
         USER.findById(id, function (err, user) {
             done(err, user); // Complete deserializeUser and return done
         });
-    });
+	});
 
-	function assignUser(profile, tokenData, smPlatform) {
+	function createUser(profile, tokenData, smPlatform) {
 		var loginTimestamp = new Date();
         var loginExpiry = tokenData.expires_in;
         var photoUrl = smPlatform == "facebook" ? "https://graph.facebook.com/" + profile.id + "/picture?type=large&w‌​idth=720&height=720" : profile.photos[0].value.slice(0,profile.photos[0].value.length-2)+"500";
@@ -81,6 +81,7 @@ module.exports = function (app, passport) {
 				loginExpiry: new Date().setSeconds(loginTimestamp.getSeconds() + loginExpiry),
 				
 				google: {
+					in_use: true,
 					currentOccupation: profile._json.occupation,
 					placesLived: profile._json.placesLived,
 					organizations: profile._json.organizations
@@ -106,15 +107,20 @@ module.exports = function (app, passport) {
 					// Has this user logged in with this social platform before?
 					if (!user[smPlatform].in_use) {
 						console.log("User's first time logging in with: " + smPlatform);
-						var updateUser = assignUser(profile, tokenData, smPlatform);
-						updateUser.update({ _id: user._id }, updateUser, function(mongoErr, raw) {
+						var updateUser = new Object();
+						updateUser.google = {
+							in_use: true
+						};
+
+						console.log("Updating userID: ", user._id);
+						USER.update({ _id: user._id }, updateUser, function(mongoErr, raw) {
 							if (mongoErr) {
 								console.log("Error updating user.");
 								resolve({err: mongoErr, data: null});
 							} else {
 								console.log("Existing user updated!");
-								console.log(raw);
-								resolve({err: null, data: raw });
+								console.log(updateUser);
+								resolve({err: null, data: user });
 							}
 						});
 					} else {
@@ -123,7 +129,7 @@ module.exports = function (app, passport) {
 					}
                 } else {
                     console.log("No existing user found - creating new user...");
-					var newUser = assignUser(profile, tokenData, smPlatform);
+					var newUser = createUser(profile, tokenData, smPlatform);
 
                     newUser.save(function (mongoErr) {
                         if (mongoErr) {
