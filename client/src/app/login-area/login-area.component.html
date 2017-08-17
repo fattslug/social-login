@@ -1,16 +1,15 @@
 <!-- LOGIN AREA COMPONENT -->
 <div class="l-section">
 	<div class="l-content-container u-text--center">
-		<div *ngIf="!userService.isLoggedIn()">
-			<div class="btn btn--secondary" (click)="googleLogin()">Login with HTTP</div>
+		<div *ngIf="userService.isLoggedIn();else loginOptions">
+			<p>User is logged in already</p>
+			<button class="btn btn--transparent" (click)="getEvents()">get calender</button>			
+			<button class="btn btn--transparent" (click)="logout()">Logout</button>
+		</div>
+		<ng-template #loginOptions>
 			<a href="http://localhost:3000/auth/google" class="btn btn--primary">Login with Google</a>
 			<a href="http://localhost:3000/auth/facebook" class="btn btn--primary">Login with Facebook</a>
 			<button class="btn btn--transparent" (click)="userService.getAllUsers()">Get all users</button>
-			<button class="btn btn--transparent" (click)="getEvents()">get calender</button>
-		</div>
-		<div *ngIf="userService.isLoggedIn()">
-			<p>User is logged in already</p>
-			<button class="btn btn--transparent" (click)="logout()">Logout</button>
-		</div>
+		</ng-template>
   	</div>
 </div>

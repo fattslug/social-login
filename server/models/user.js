@@ -9,12 +9,19 @@ var userSchema = mongoose.Schema({
     photo: String,
     email: String,
     name: String,
-    currentOccupation: String,
-    sm_platform: String,
     token: String,
+    loginTimestamp: Date,
+    loginExpiry: Date,
 
-    placesLived: { type: Array, default: void 0 },
-    organizations: { type: Array, default: void 0 }
+    google: {
+        in_use: Boolean,
+        currentOccupation: String,
+        placesLived: { type: Array, default: void 0 },
+        organizations: { type: Array, default: void 0 }
+    },
+    facebook: {
+        in_use: Boolean
+    }
 });
 
 // methods ======================

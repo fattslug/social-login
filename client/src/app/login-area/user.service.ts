@@ -15,18 +15,21 @@ export class UserService {
 	}
 
 	isLoggedIn(): boolean {
+		// Is there a user in local storage?
+		// Is there a user in our service?
+		// Are these users the same?
 		let userCookie = JSON.parse(localStorage.getItem('currentUser'));
-		if (userCookie && this.currentUser) {
-			console.log("-- USER IS LOGGED IN --");
+		if (userCookie && this.currentUser && (userCookie.userID === this.currentUser.userID)) {
 			return true;
 		} else {
-			console.log("-- USER IS NOT LOGGED IN --");
+			localStorage.removeItem('currentUser');
+			this.currentUser = null;
 			return false;
 		}
 	}
 
 	doLogout(): void {
-		// this.currentUser = null;
+		this.currentUser = null;
 		localStorage.removeItem('currentUser');
 	}
 
@@ -61,7 +64,7 @@ export class UserService {
 
 	setCurrentUser(user: User) {
 		this.currentUser = user;
-		localStorage.setItem('currentUser', JSON.stringify({ token: user.token, userID: user.userID }));
+		localStorage.setItem('currentUser', JSON.stringify({ token: user.token, userID: user.userID, timestamp: new Date()}));
 	}
 
 	getCurrentUser(): User {

@@ -16,12 +16,8 @@ export class LoginAreaComponent implements OnInit {
 	}
 
 	ngOnInit() {
-		console.log("Current User: ", this.userService.getCurrentUser());
 		if (this.userService.isLoggedIn()) {
-			console.log("User is logged in");
 			var token = this.userService.getCurrentUser().token; // your token
-		} else {
-			console.log("User is not logged in");
 		}
 	}
 
