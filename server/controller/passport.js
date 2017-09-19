@@ -1,11 +1,14 @@
 var FacebookStrategy = require('passport-facebook').Strategy; // Import Passport-Facebook Package
-var TwitterStrategy = require('passport-twitter').Strategy; // Import Passport Twitter Package
 var GoogleStrategy = require('passport-google-oauth').OAuth2Strategy; // Import Passport Google Package
+var BasicStrategy = require('passport-http').BasicStrategy;
+var refresh = require('passport-oauth2-refresh')
 var USER = require('../models/user'); // Import User Model
 var session = require('express-session'); // Import Express Session Package
 var jwt = require('jsonwebtoken'); // Import JWT Package
 var secret = 'harrypotter'; // Create custom secret to use with JWT
 var FB = require('fb');
+
+var bodyParser = require('body-parser').json();
 
 // load the auth variables
 var configAuth = require('../utility/config');
@@ -25,6 +28,7 @@ function addPlatformToUser(profile, tokenData, smPlatform) {
 			facebook: {
 				in_use: true,
 				token: tokenData.access_token,
+				refreshToken: tokenData.refresh_token,
 				tokenTimestamp: tokenTimestamp,
 				tokenExpiry: new Date().setSeconds(tokenTimestamp.getSeconds() + tokenExpiry)
 			}
@@ -37,6 +41,7 @@ function addPlatformToUser(profile, tokenData, smPlatform) {
 				placesLived: profile._json.placesLived,
 				organizations: profile._json.organizations,
 				token: tokenData.access_token,
+				refreshToken: tokenData.refresh_token,
 				tokenTimestamp: tokenTimestamp,
 				tokenExpiry: new Date().setSeconds(tokenTimestamp.getSeconds() + tokenExpiry)
 			}
@@ -49,10 +54,12 @@ function addPlatformToUser(profile, tokenData, smPlatform) {
 // Creates an object containing all generic user data, and data specific to the logged in social media platform
 // This object is then cast to a USER object, where we have access to our mongoose methods (CRUD)
 function createUser(profile, tokenData, smPlatform) {
-	var tokenTimestamp = new Date();
-	var tokenExpiry = tokenData.expires_in;
-	var photoUrl = smPlatform == "facebook" ? "https://graph.facebook.com/" + profile.id + "/picture?type=large&w‌​idth=720&height=720" : profile.photos[0].value.slice(0,profile.photos[0].value.length-2)+"500";
-
+	if (smPlatform !== 'basic') {
+		var tokenTimestamp = new Date();
+		var tokenExpiry = tokenData.expires_in;
+		var photoUrl = smPlatform == "facebook" ? "https://graph.facebook.com/" + profile.id + "/picture?type=large&w‌​idth=720&height=720" : profile.photos[0].value.slice(0,profile.photos[0].value.length-2)+"500";	
+	}
+	
 	if (smPlatform === "facebook") {
 		// FACEBOOK USER
 		var newUser = {
@@ -64,11 +71,14 @@ function createUser(profile, tokenData, smPlatform) {
 			facebook: {
 				in_use: true,
 				token: tokenData.access_token,
+				refreshToken: tokenData.refresh_token,
 				tokenTimestamp: tokenTimestamp,
 				tokenExpiry: new Date().setSeconds(tokenTimestamp.getSeconds() + tokenExpiry)
 			}
 		};
 	} else if (smPlatform === "google") {
+		console.log("CREATE USER: RefreshToken: ", tokenData.refresh_token);
+
 		// GOOGLE USER
 		var newUser = {
 			userID: profile.id,
@@ -82,10 +92,19 @@ function createUser(profile, tokenData, smPlatform) {
 				placesLived: profile._json.placesLived,
 				organizations: profile._json.organizations,
 				token: tokenData.access_token,
+				refreshToken: tokenData.refresh_token,
 				tokenTimestamp: tokenTimestamp,
 				tokenExpiry: new Date().setSeconds(tokenTimestamp.getSeconds() + tokenExpiry)
 			}
 		};
+	} else if (smPlatform === "basic") {
+
+		// CUSTOM USER
+		var newUser = {
+			email: profile.emails[0].value,
+			password: profile.password
+		};
+		
 	}
 
 	return newUser;
@@ -105,11 +124,11 @@ function findUser(profile, tokenData, smPlatform) {
 				console.log("User found - retrieving profile...");
 
 				// Has this user logged in with this social platform before?
-				if (!user[smPlatform].in_use) { // First time logging in with this platform
+				if (smPlatform !== 'basic' && !user[smPlatform].in_use) { // First time logging in with this platform
 					console.log("User's first time logging in with: " + smPlatform);
 					var updateUser = addPlatformToUser(profile, tokenData, smPlatform);
 
-					console.log("Updating userID: ", user._id);
+					console.log("Adding " + smPlatform + " object to userID: ", user._id);
 					USER.update({ _id: user._id }, updateUser, function(mongoErr, raw) {
 						if (mongoErr) {
 							console.log("Error updating user.");
@@ -122,41 +141,72 @@ function findUser(profile, tokenData, smPlatform) {
 				} else { // Platform has already been linked to this account
 					// CHECK ACCESS TOKENS FOR EXPIRATION
 					console.log("User has already linked this social platform: " + smPlatform);
-					var token = user[smPlatform].accessToken;
-					var tokenTimestamp = user[smPlatform].tokenTimestamp;
-					var tokenExpiry = user[smPlatform].tokenExpiry;
+					console.log("Updating user data: ", user._id);
 
-					console.log("Token Expiry Date: ", tokenExpiry);
-
-					var currentDate = new Date().getSeconds();
-
-					if (tokenExpiry <= currentDate) {
-						console.log("Access token is expired - refreshing...");
-						if (smProfile === "google") {
-														
-						} else if (smProfile === "facebook") {
-
-						}
-					} else if (tokenExpiry > currentDate) {
-						console.log("Access token is still valid, keeping the same one...");
+					if (tokenData) {
+						var tokenTimestamp = new Date();
+						var tokenExpiry = tokenData.expires_in;
+						var refreshToken = tokenData.refresh_token;
 					}
+
+					var userUpdate = {};
+
+					if (smPlatform === 'google') {
+						userUpdate = {
+							'google.token': tokenData.access_token,
+							'google.tokenTimestamp': tokenTimestamp,
+							'google.refreshToken': refreshToken,
+							'google.tokenExpiry': new Date().setSeconds(tokenTimestamp.getSeconds() + tokenExpiry)
+						};
+					} else if (smPlatform === 'facebook') {
+						userUpdate = {
+							'facebook.token': tokenData.access_token,
+							'facebook.tokenTimestamp': tokenTimestamp,
+							'facebook.refreshToken': refreshToken,
+							'facebook.tokenExpiry': new Date().setSeconds(tokenTimestamp.getSeconds() + tokenExpiry)
+						};
+					} else if (smPlatform === 'basic') {
+						switch(profile.requestType) {
+							case 'register':
+								userUpdate = {
+									'password': profile.password
+								}
+							break;
+							case 'login': 
+								user.validatePassword(profile.password);
+							break;
+						}
+					}
+					USER.update({ _id: user._id }, userUpdate, function(mongoErr, raw) {
+						if (mongoErr) {
+							console.log("Error updating token info.");
+							resolve({err: mongoErr, data: null});
+						} else {
+							console.log("Existing user info updated!");
+							resolve({err: null, data: user });
+						}
+					});
 
 					resolve({err: null, data: user});
 				}
-			// NO USER FOUND -- CREATE USER
+			// NO USER FOUND -- CREATE USER IF SOCIAL MEDIA LOGIN
 			} else {
-				console.log("No existing user found - creating new user...");
-				var newUser = new USER(createUser(profile, tokenData, smPlatform));
-
-				newUser.save(function (mongoErr) {
-					if (mongoErr) {
-						console.log("Error saving new user.");
-						resolve({err: mongoErr, data: null});
-					} else {
-						console.log("New user added!");
-						resolve({err: null, data: newUser});
-					}
-				});
+				if (smPlatform !== 'basic') {
+					console.log("No existing user found - creating new user...");
+					var newUser = new USER(createUser(profile, tokenData, smPlatform));
+	
+					newUser.save(function (mongoErr) {
+						if (mongoErr) {
+							console.log("Error saving new user.");
+							resolve({err: mongoErr, data: null});
+						} else {
+							console.log("New user added!");
+							resolve({err: null, data: newUser});
+						}
+					});
+				} else {
+					resolve({ err: "No user found.", data: null });
+				}
 			}
 		});
 	});
@@ -198,88 +248,117 @@ module.exports = function (app, passport) {
         });
 	});
 
+
+
+
+
+
+	var basicStrategy = new BasicStrategy(function(userid, password, done) {
+		console.log("Running basic strategy...");
+		console.log("User ID: " + userid);
+		console.log("Password: " + password);
+		USER.findOne({ email: userid }, function (err, user) {
+			if (err) {
+				return done(err); 
+			}
+			if (!user) { 
+				return done(null, false); 
+			}
+			if (!user.validatePassword(password)) { 
+				return done(null, false); 
+			}
+			return done(null, user);
+		});
+	});
+
+
+
+
+
     // Google Strategy  
-    passport.use(new GoogleStrategy({
-            clientID: configAuth.googleAuth.clientID,
-            clientSecret: configAuth.googleAuth.clientSecret,
-            callbackURL: configAuth.googleAuth.callbackURL,
-        },
-        function (accessToken, refreshToken, profile, done) { // called when we hit the callbackURL
-            console.log("Google Strategy callback...");
+    var googleStrategy = new GoogleStrategy({
+		clientID: configAuth.googleAuth.clientID,
+		clientSecret: configAuth.googleAuth.clientSecret,
+		callbackURL: configAuth.googleAuth.callbackURL,
+	},
+	function (accessToken, refreshToken, profile, done) { // called when we hit the callbackURL
+		console.log("Google Strategy callback...");
 
-            console.log("Access Token: ", accessToken);
-            console.log("Refresh Token: ", refreshToken);
-            var options = {
-                host: 'www.googleapis.com',
-                port: 443,
-                path: '/oauth2/v1/tokeninfo?access_token='+accessToken,
-            };
-            var req = https.get(options, (response) => {
-                // console.log("REQUEST: ", req);                
-                response.on('data', function (chunk) {
-					var body = JSON.parse(chunk);
+		console.log("Access Token: ", accessToken);
+		console.log("Refresh Token: ", refreshToken);
+		
+		var options = {
+			host: 'www.googleapis.com',
+			port: 443,
+			path: '/oauth2/v1/tokeninfo?access_token='+accessToken,
+		};
+		var req = https.get(options, (response) => {
+			// console.log("REQUEST: ", req);                
+			response.on('data', function (chunk) {
+				var body = JSON.parse(chunk);
 
-                    var tokenInfo = {
-                        access_token: accessToken,
-                        expires_in: body.expires_in
-					};
+				var tokenInfo = {
+					access_token: accessToken,
+					refresh_token: refreshToken,
+					expires_in: body.expires_in
+				};
 
-                    findUser(profile, tokenInfo, "google").then((result) => {
-                        done(result.err, result.data);
-                    });
-                });
-            });
-            req.end();
-
-            req.on('error', (e) => {
-                console.log(e);
-                done(e);
-            });
-        }
-    ));
-
-    // Facebook Strategy
-    passport.use(new FacebookStrategy({
-            clientID: configAuth.facebookAuth.clientID, // Replace with your Facebook Developer App client ID
-            clientSecret: configAuth.facebookAuth.clientSecret, // Replace with your Facebook Developer client secret
-            callbackURL: configAuth.facebookAuth.callbackURL, // Replace with your Facebook Developer App callback URL
-            profileFields: ['id', 'displayName', 'photos', 'email']
-        },
-        function(accessToken, refreshToken, profile, done) {
-            console.log("Facebook Strategy callback...");
-
-			console.log("Access Token: ", accessToken);
-            console.log("Refresh Token: ", refreshToken);
-
-            var shortLifeAccessToken = accessToken;
-            var longLifeAccessToken;
-
-            FB.api('oauth/access_token', {
-                client_id: configAuth.facebookAuth.clientID,
-                client_secret: configAuth.facebookAuth.clientSecret,
-                grant_type: 'fb_exchange_token',
-                fb_exchange_token: shortLifeAccessToken
-            }, function(res) {
-                if (!res || res.error) {
-                    console.log(!res ? 'could not extend ' + provider + 'token' : res.error);
-                    return next(); // TODO change this to a usable response that will show up on the client side aka not sure how we are handling errors in this app yet!
-                }
-                console.log('new access token granted for long life');
-				findUser(profile, res, "facebook").then((result) => {
+				findUser(profile, tokenInfo, "google").then((result) => {
 					done(result.err, result.data);
 				});
-				// FB.api('/'+profile.id, function (response) {
-				// 	if (response && !response.error) {
-				// 		console.log("Response from Facebook User Graph API");
-				// 		console.log(response);
-				// 		findUser(profile, res, "Facebook").then((result) => {
-				// 			done(result.err, result.data);
-				// 		});
-				// 	}
-				// });
-            });
-        }
-    ));
+			});
+		});
+		req.end();
+
+		req.on('error', (e) => {
+			console.log(e);
+			done(e);
+		});
+	});
+
+
+
+
+
+
+    // Facebook Strategy
+    var fbStrategy = new FacebookStrategy({
+		clientID: configAuth.facebookAuth.clientID, // Replace with your Facebook Developer App client ID
+		clientSecret: configAuth.facebookAuth.clientSecret, // Replace with your Facebook Developer client secret
+		callbackURL: configAuth.facebookAuth.callbackURL, // Replace with your Facebook Developer App callback URL
+		profileFields: ['id', 'displayName', 'photos', 'email']
+	},
+	function(accessToken, refreshToken, profile, done) {
+		console.log("Facebook Strategy callback...");
+
+		var shortLifeAccessToken = accessToken;
+		var longLifeAccessToken;
+
+		FB.api('oauth/access_token', {
+			client_id: configAuth.facebookAuth.clientID,
+			client_secret: configAuth.facebookAuth.clientSecret,
+			grant_type: 'fb_exchange_token',
+			fb_exchange_token: shortLifeAccessToken
+		}, function(res) {
+			if (!res || res.error) {
+				console.log(!res ? 'could not extend ' + provider + 'token' : res.error);
+				return next(); // TODO change this to a usable response that will show up on the client side aka not sure how we are handling errors in this app yet!
+			}
+			console.log('LL Access Token: ' + res.access_token);
+			findUser(profile, res, "facebook").then((result) => {
+				done(result.err, result.data);
+			});
+		});
+
+
+
+
+
+	});
+
+	passport.use(googleStrategy);
+	passport.use(fbStrategy);
+	passport.use(basicStrategy);
 
     // Google Routes
     app.get('/auth/google', passport.authenticate('google', {scope: ['https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/calendar'], accessType: 'offline', approvalPrompt: 'force'}));
@@ -293,7 +372,53 @@ module.exports = function (app, passport) {
     app.get('/auth/facebook/callback', passport.authenticate('facebook', { failureRedirect: 'http://localhost:4200/login-error' }), function(req, res) {
         console.log("Redirecting back to app...");
         res.redirect('http://localhost:4200/login/' + token); // Redirect user with newly assigned token
-    });
+	});
+	
+	// Local Routes
+    app.post('/auth/basic', passport.authenticate('basic', { session: false }), function(req, res) {
+		console.log(req.user);
+		res.json(req.user);
+		// var profile = {
+		// 	emails: [{ value: req.username }],
+		// 	password: req.password
+		// }
+		// findUser(profile, null, 'basic').then(result => {
+		// 	if (!result.err) {
+		// 		console.log("Login success!");
+		// 		res.json(result);
+		// 	} else {
+		// 		console.log("Login failure!");
+		// 		console.log(result.err);
+		// 		res.json(null);
+		// 	}
+		// });
+	});
+
+	app.post('/register', bodyParser, function(req, res) {
+		var profile = {
+			emails: [{ value: req.body.username }],
+			password: req.body.password,
+			requestType: 'register'
+		}
+		findUser(profile, null, 'basic').then(result => {
+			console.log(result);
+			if (!result.err) {
+				res.json(result);
+			} else {
+				console.log("Creating user...");
+				var newUser = new USER(createUser(profile, null, 'basic'));
+				newUser.save(function (mongoErr) {
+					if (mongoErr) {
+						console.log("Error saving new user.");
+						res.json(null);
+					} else {
+						console.log("New user added!");
+						res.json(newUser);
+					}
+				});
+			}
+		});
+	});
 
     return passport; // Return Passport Object
 };

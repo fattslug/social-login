@@ -5,28 +5,37 @@
 				<div class="agent-profile" itemscope itemtype="http://schema.org/InsuranceAgency">
 					<div class="agent-profile__section-1">
 						<h2 class="heading heading--1 heading--first" itemprop="name">{{ userService.currentUser.name }}</h2>
-						<p class="agent-profile__job-title">{{ userService.currentUser.currentOccupation }}</p>
+						<p class="" *ngIf="userService.currentUser.google.currentOccupation">{{ userService.currentUser.google.currentOccupation }}</p>
+						<ul class="social-list plain-list">
+							<li><a class="social-list__icon social-list__icon--facebook" href="#example" *ngIf="userService.currentUser.facebook" itemprop="sameAs">Facebook for {{ userService.currentUser.name }}</a></li>
+							<li><a class="social-list__icon social-list__icon--google" href="#example" *ngIf="userService.currentUser.google" itemprop="sameAs">Google for {{ userService.currentUser.name }}</a></li>
+						</ul>
 					</div>
 					<div class="agent-profile__section-2">
-						<img class="agent-profile__image" src="{{ userService.currentUser.photo }}" itemprop="photo" alt="">
+						<img class="agent-profile__image" *ngIf="userService.currentUser.photo" src="{{ userService.currentUser.photo }}" itemprop="photo" alt="">
 					</div>
 					<div class="agent-profile__section-3">
-						<h3 class="heading heading--2 heading--first">Contact Information</h3>
+						<h3 class="heading heading--2 heading--first">Other Information</h3>
 						<div class="l-columns l-columns--2-medium l-columns--2-large">
-							<div class="l-columns__column">
+							<div *ngIf="userService.currentUser.google.placesLived[0].value" class="l-columns__column">
 								<p class="text-icon text-icon--address" itemprop="address" itemscope itemtype="http://schema.org/PostalAddress">
-								<span itemprop="streetAddress">Suite 2707, 28 Linden Street</span><br/>
-								<span itemprop="addressLocality">Toronto, Ontario</span><br/>
-								<span itemprop="postalCode">M4Y 0A4</span><br/>
-								<span itemprop="addressCountry">Canada</span></p>
+								<span itemprop="streetAddress">{{ userService.currentUser.google.placesLived[0].value }}</span><br/>
 							</div>
 							<div class="l-columns__column">
-								<p class="text-icon text-icon--tel" itemprop="telephone"></p>
 								<p class="text-icon text-icon--email"><a href="mailto:{{ userService.currentUser.email }}" itemprop="email">{{ userService.currentUser.email }}</a></p>
-								<ul class="social-list plain-list">
-									<li><a class="social-list__icon social-list__icon--facebook" href="#example" *ngIf="userService.currentUser.facebook" itemprop="sameAs">Facebook for {{ userService.currentUser.name }}</a></li>
-									<li><a class="social-list__icon social-list__icon--google" href="#example" *ngIf="userService.currentUser.google" itemprop="sameAs">Google for {{ userService.currentUser.name }}</a></li>
-								</ul>
+							</div>
+						</div>
+						<div class="l-columns l-columns--2-medium l-columns--2-large">
+							<div *ngIf="userService.currentUser.google.placesLived" class="l-columns__column">
+								<p class="text-icon text-icon--address" itemprop="address" itemscope itemtype="http://schema.org/PostalAddress">
+								<span itemprop="streetAddress">{{ userService.currentUser.google.placesLived[1].value }}</span><br/>
+								<span itemprop="streetAddress">{{ userService.currentUser.google.placesLived[2].value }}</span><br/>
+								<span itemprop="streetAddress">{{ userService.currentUser.google.placesLived[3].value }}</span><br/>
+							</div>
+							<div class="l-columns__column">
+								<p *ngIf="userService.currentUser.google.organizations[0].title">Studied <b>{{ userService.currentUser.google.organizations[0].title }}</b> at <b>{{ userService.currentUser.google.organizations[0].name }}</b> [{{ userService.currentUser.google.organizations[0].startDate }} - {{ userService.currentUser.google.organizations[0].endDate }}]</p>
+								<p *ngIf="userService.currentUser.google.organizations[1]">Went to <b>{{ userService.currentUser.google.organizations[1].name }}</b></p>
+								<p *ngIf="userService.currentUser.google.organizations[2]">Went to <b>{{ userService.currentUser.google.organizations[2].name }}</b></p>
 							</div>
 						</div>
 					</div>

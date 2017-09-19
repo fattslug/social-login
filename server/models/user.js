@@ -9,6 +9,7 @@ var userSchema = mongoose.Schema({
     photo: String,
     email: String,
     name: String,
+    password: String,
 
     google: {
         in_use: Boolean,
@@ -16,12 +17,14 @@ var userSchema = mongoose.Schema({
         placesLived: { type: Array, default: void 0 },
         organizations: { type: Array, default: void 0 },
         token: String,
+        refreshToken: String,
         tokenTimestamp: Date,
         tokenExpiry: Date
     },
     facebook: {
         in_use: Boolean,
         token: String,
+        refreshToken: String,
         tokenTimestamp: Date,
         tokenExpiry: Date
     }
@@ -34,8 +37,9 @@ userSchema.methods.generateHash = function(password) {
 };
 
 // checking if password is valid
-userSchema.methods.validPassword = function(password) {
-    return bcrypt.compareSync(password, this.local.password);
+userSchema.methods.validatePassword = function(password) {
+    // return bcrypt.compareSync(password, this.password);
+    return (password === this.password);
 };
 
 // create the model for users and expose it to our app

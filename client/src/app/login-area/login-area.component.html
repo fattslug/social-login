@@ -3,13 +3,13 @@
 	<div class="l-content-container u-text--center">
 		<div *ngIf="userService.isLoggedIn();else loginOptions">
 			<p>User is logged in already</p>
-			<button class="btn btn--transparent" (click)="getEvents()">get calender</button>			
+			<!-- <button class="btn btn--transparent" (click)="getEvents()">Get Calendar Data</button> -->
 			<button class="btn btn--transparent" (click)="logout()">Logout</button>
 		</div>
 		<ng-template #loginOptions>
 			<a href="http://localhost:3000/auth/google" class="btn btn--primary">Login with Google</a>
 			<a href="http://localhost:3000/auth/facebook" class="btn btn--primary">Login with Facebook</a>
-			<button class="btn btn--transparent" (click)="userService.getAllUsers()">Get all users</button>
 		</ng-template>
   	</div>
 </div>
+<script id="js-init" src="http://cdn.aviva.com/static/core/beta/v.2.0.0/js/init.js"></script>

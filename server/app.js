@@ -1,15 +1,8 @@
 var express = require('express'); // ExperssJS Framework
 var app = express(); // Invoke express to variable for use in application
-var port = process.env.PORT || 3000; // Set default port or assign a port in enviornment
-var mongoose = require('mongoose'); // HTTP request logger middleware for Node.js
-var bodyParser = require('body-parser'); // Node.js body parsing middleware. Parses incoming request bodies in a middleware before your handlers, available under req.body.
-var path = require('path'); // Import path module
-var passport = require('passport'); // Express-compatible authentication middleware for Node.js.
-var social = require('./controller/passport')(app, passport); // Import passport.js End Points/API
-var session = require('express-session'); // Import Express Session Package
-// Add headers
-app.use(function (req, res, next) {
 
+app.use(function (req, res, next) {
+    
     // Website you wish to allow to connect
     res.setHeader('Access-Control-Allow-Origin', '*');
 
@@ -22,6 +15,14 @@ app.use(function (req, res, next) {
     // Pass to next layer of middleware
     return next();
 });
+
+var port = process.env.PORT || 8000; // Set default port or assign a port in enviornment
+var mongoose = require('mongoose'); // HTTP request logger middleware for Node.js
+var bodyParser = require('body-parser'); // Node.js body parsing middleware. Parses incoming request bodies in a middleware before your handlers, available under req.body.
+var path = require('path'); // Import path module
+var passport = require('passport'); // Express-compatible authentication middleware for Node.js.
+var social = require('./controller/passport')(app, passport); // Import passport.js End Points/API
+var session = require('express-session'); // Import Express Session Package
 
 app.use(bodyParser.json()); // Body-parser middleware
 app.use(bodyParser.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
