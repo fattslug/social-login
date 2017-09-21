@@ -101,6 +101,7 @@ function createUser(profile, tokenData, smPlatform) {
 
 		// CUSTOM USER
 		var newUser = {
+			name: profile.name,
 			email: profile.emails[0].value,
 			password: profile.password
 		};
@@ -395,7 +396,9 @@ module.exports = function (app, passport) {
 	});
 
 	app.post('/register', bodyParser, function(req, res) {
+		console.log("REQUEST RECEIVED: ", req.body);
 		var profile = {
+			name: req.body.firstName + " " + req.body.lastName,
 			emails: [{ value: req.body.username }],
 			password: req.body.password,
 			requestType: 'register'
